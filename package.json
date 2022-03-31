@@ -10,6 +10,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@pixi/filter-emboss": "^4.1.5",
+    "browserify": "^17.0.0",
+    "pixi-filters": "^4.1.6",
+    "pixi-plugin-bump": "^1.1.8",
     "pixi.js": "^6.3.0"
   }
 }

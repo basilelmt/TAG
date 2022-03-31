@@ -94,7 +94,7 @@ running.play();
 
 let character = {
     x: app.screen.width/2.5, y: app.screen.height/1.18,
-    vx: 0, vy: 0,
+    vx: 5, vy: 0,
     direction: 0,
     activeAnim: standing,
     jumped: false
@@ -114,6 +114,10 @@ app.ticker.add((time) => {
             running.scale.x = -4;
             standing.scale.x = -4;
         }
+        if (e.key === " " && !character.jumped) {
+            character.jumped = true;
+            character.vy = 20;
+        }
     })
 
     document.addEventListener('keyup', function(e) {
@@ -127,13 +131,17 @@ app.ticker.add((time) => {
         }
     })
     if (character.direction === 1) {
-        character.vx = Math.max(10, character.vx+=0.2)
         character.x += character.vx;
     }
     if (character.direction === -1) {
-        character.vx = Math.min(-10, character.vx-=0.2)
-        character.x += character.vx;
+        character.x -= character.vx;
     }
+    if (character.vy > 0) {
+        character.y -= character.vy;
+        character.vy -= 1;
+    }
+    if (character.vy === 0)
+        character.jumped = false;
     blur.velocity = [character.vx, character.vy]
     running.position.set(character.x, character.y);
     standing.position.set(character.x, character.y)

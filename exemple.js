@@ -259,8 +259,6 @@ app.loader.load((loader, resources) => {
       character.vy = -19;
       character.jumped = true;
     }
-
-
   });
 });
 

@@ -1,69 +1,66 @@
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
 const app = new PIXI.Application();
+app.renderer.backgroundColor = 0x211f30;
+app.renderer.view.style.position = 'absolute';
+app.renderer.resize(window.innerWidth, window.innerHeight);
 const graphics = new PIXI.Graphics();
-const OFFSETX = -322
-const OFFSETY = -54
+const pixel = new PIXI.Graphics();
+const SCALE = 1.8
+const OFFSETX = (app.screen.width/2)-800*0.9
+const OFFSETY = (app.screen.height/2)-448*0.9
 
 document.body.appendChild(app.view);
 
-app.renderer.backgroundColor = 0x00D8FF;
-app.renderer.view.style.position = 'absolute';
-app.renderer.resize(window.innerWidth, window.innerHeight);
 
 // ------ Map colision ------
 
 var map = [
-    "111111111111111111111111111111111111111111111111111111111111111111111111",
-    "111111111111111111111111111111111111111111111111111111111111111111111111",
-    "111111111111111111111111111111111111111111111111111111111111111111111111",
-    "111111111111111111111111111111111111111111111111111111111111111111111111",
-    "111111111111111111111111111111111111111111111111111111111111111111111111",
-    "111111111111111111111111111111111111111111111111111111111111111111111111",
-    "111111111111111111111110000000000000000000000000011111111111111111111111",
-    "111111111111111111110001111111111111111111111111100011111111111111111111",
-    "111111111111111111001111111111111111111111111111111100111111111111111111",
-    "111111111111111110111111111111111111111111111111111111011111111111111111",
-    "111111111111111101111100011111111111111111111111111111101111111111111111",
-    "111111111111111011111111111111111111111111111111111111110111111111111111",
-    "111111111111100011111111111111111100111111111111111111110001111111111111",
-    "111111111111011111111111111111111100111111111111111111111110111111111111",
-    "111111111111011111111111111111111111111111111111111111111110111111111111",
-    "111111111111011111111111111111111111111111111110000011111110111111111111", //15
-    "111111111111011111111111111111111111111111111111111111111110111111111111",
-    "111111111111011111111111111111111111111111111111111111111110111111111111",
-    "111111111111011111111111111111111111111111111111111111111110111111111111",
-    "111111111111000111111111111100000000111111111111111111111110111111111111",
-    "111111111111011111111111111111111111111111111111111111111110111111111111", //20
-    "111111111111011111111111111111111111111111111111111111111110111111111111",
-    "111111111111011111111111111111111111111111111111100011111110111111111111",
-    "111111111111011111110111111111111111111111111111111111111110111111111111", // 23
-    "111111111111011111111000111111111111111111111111111111111110111111111111",
-    "111111111111011111111111111111110011111111111111111111111110111111111111",
-    "111111111111100011111111111111110011111111111111111111110001111111111111",
-    "111111111111111011111111111111111111111111100011111111110111111111111111",
-    "111111111111111101111111111111111111111111111111111111101111111111111111",
-    "111111111111111110111111111111111111111111111111111111011111111111111111",
-    "111111111111111111001111111111111111111111111111111100111111111111111111", //30
-    "111111111111111111110001111111111111111111111111100011111111111111111111",
-    "111111111111111111111110000000000000000000000000011111111111111111111111",
-    "111111111111111111111111111111111111111111111111111111111111111111111111",
-    "111111111111111111111111111111111111111111111111111111111111111111111111",
-    "111111111111111111111111111111111111111111111111111111111111111111111111",
-    "111111111111111111111111111111111111111111111111111111111111111111111111",
-    "111111111111111111111111111111111111111111111111111111111111111111111111",
-    "111111111111111111111111111111111111111111111111111111111111111111111111"
+    "00000000000000000000000000000000000000000000000000",
+    "00000000000011111111111111111111111111111111100000",
+    "00000000011111111111111111111111111111111111111000",
+    "00000111111111111111111111111111111111111111111100",
+    "00001111111000111111111111111111111111111111111100",
+    "00111111111111111111111111111111111111111111111100",
+    "00111111111111111111111001111111111111111111111100",
+    "00111111111111111111111001111111111111111111111100",
+    "00111111111111111111111111111111111111111111111100",
+    "00111111111111111111111111111111111100000111111100",
+    "00111111111111111111111111111111111111111111111100",
+    "00111111111111111111111111111111111111111111111100",
+    "00111111111111111111111111111111111111111111111100",
+    "00001111111111111000000001111111111111111111111100",
+    "00001111111111111111111111111111111111111111111100",
+    "00001111111111111111111111111111111111111111111100", //15
+    "00001111111111111111111111111111111111000111111100",
+    "00001111101111111111111111111111111111111111111100",
+    "00001111110001111111111111111111111111111111111100",
+    "00001111111111111111100111111111111111111111111100",
+    "00000111111111111111100111111111111111111111100000",
+    "00000111111111111111111111111111000111111111100000",
+    "00000011111111111111111111111111111111111111000000",
+    "00000001111111111111111111000111111111111110000000",
+    "00000000011111111111111111000111111111111000000000",
+    "00000000000011111111111110000111111111000000000000", //25
+    "00000000000000000000000000000000000000000000000000",
+    "00000000000000000000000000000000000000000000000000"
 ];
 
-// ------ Background image ------
+// ------ Backgfloor image ------
 const mapSprite = PIXI.Sprite.from('./terrain.png');
 
 mapSprite.anchor.set(0.5);
 // mapSprite.filters = [new PIXI.filters.GlitchFilter(10)]
-app.stage.addChild(mapSprite);
 mapSprite.x = app.screen.width / 2;
 mapSprite.y = app.screen.height / 2;
-mapSprite.scale.set(2, 2);
+mapSprite.scale.set(SCALE, SCALE);
+//800, 448
+
+graphics.beginFill(0x00D8FF);
+graphics.drawRect(OFFSETX, OFFSETY, 800*SCALE, 448*SCALE);
+graphics.endFill();
+app.stage.addChild(graphics);
+app.stage.addChild(mapSprite);
 
 // ------ Character ------
 // app.loader.load(setup)
@@ -95,42 +92,46 @@ running.animationSpeed = 0.2;
 running.play();
 
 let character = {
-    x: app.screen.width/2.5, y: app.screen.height/1.178,
-    vx: 5, vy: 0,
+    x: app.screen.width/2.5, y: 750,//app.screen.height/1.26,
+    vx: 10, vy: 0,
     direction: 0,
     activeAnim: standing,
-    touchingGround: true,
+    touchingFloor: true,
     jumped: false
 };
 
-const coliding = coord => map[coord[1]][coord[0]] == 0
+const coliding = coord => !map[coord[1]][coord[0]]
 
-function testColision(hitbox, index, movement) {
-
-    for (let i = 0; i < 4; i++)
-        hitbox[i][index] = hitbox[i][index] + movement;
+function testCollision(worldX, worldY) {
+    let hitbox = [
+        [Math.floor((worldX-OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))+1],
+        [Math.floor((worldX-OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))],
+        [Math.floor((worldX-OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))-1],
+        [Math.floor((worldX-OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))-2]
+    ]
     if (hitbox.some(coliding))
-        return false
-    return true
+        return false;
+    return true;
 }
 
 document.addEventListener('keydown', function(e) {
     if (e.key === "ArrowRight") {
         character.direction = 1;
+        character.vx = Math.min(8, character.vx + 2);
         character.activeAnim = running
         running.scale.x = 4;
         standing.scale.x = 4;
     }
     if (e.key === "ArrowLeft") {
         character.direction = -1;
+        character.vx = Math.max(-8, character.vx - 2);
         character.activeAnim = running
         running.scale.x = -4;
         standing.scale.x = -4;
     }
-    if (e.key === " " && !character.jumped) {
-        character.touchingGround = false;
-        character.jumped = true;
-        character.vy = 25;
+    if (e.key === " " && touchingGround) {
+        touchingGround = false;
+        character.vy = -15;
     }
 })
 
@@ -145,44 +146,87 @@ document.addEventListener('keyup', function(e) {
     }
 })
 
+// Listen for frame updates
 app.ticker.add((time) => {
-    let hitbox = [
-        [Math.round((character.x+OFFSETX)/32)+21, Math.round((character.y+OFFSETY)/32)+5],
-        [Math.round((character.x+OFFSETX)/32)+21, Math.round((character.y+OFFSETY)/32)+6],
-        [Math.round((character.x+OFFSETX)/32)+21, Math.round((character.y+OFFSETY)/32)+7],
-        [Math.round((character.x+OFFSETX)/32)+21, Math.round((character.y+OFFSETY)/32)+8]
-    ]
-    // console.log(
-    //     map[hitbox[0][1]][hitbox[0][0]],
-    //     map[hitbox[1][1]][hitbox[1][0]],
-    //     map[hitbox[2][1]][hitbox[2][0]],
-    //     map[hitbox[3][1]][hitbox[3][0]],
-    // )
-    if (character.direction === 1 && testColision(hitbox, 0, 1)) {
-        character.x += character.vx;
+
+    console.log("x =", Math.floor((character.x+OFFSETX)/(16*SCALE))-4, "y =", Math.floor((character.y+OFFSETY)/(16*SCALE))-3)
+    console.log("TRUEx =", character.x, "TRUEy =", character.y)
+
+    character.vy = Math.min(12, character.vy + 1)
+    if (character.vx > 0) {
+        character.vx -= 1;
     }
-    if (character.direction === -1 && testColision(hitbox, 0, -1)) {
-        character.x -= character.vx;
+    if (character.vx < 0) {
+        character.vx += 1;
     }
-    if (character.vy > 0 && testColision(hitbox, 1, -1)) {
-        character.y -= character.vy;
-        character.vy -= 1;
+    console.log("vx =", character.vx);
+    let touchingGround = testCollision(
+        character.x + 2,
+        character.y + 16 * SCALE * 2 + 1
+      ) || testCollision(
+        character.x + 16 * SCALE - 3,
+        character.y + 16 * SCALE * 2 + 1
+    );
+
+    if (character.vy > 0) {
+        for (let i = 0; i < character.vy; i++) {
+            let testX1 = character.x + 2;
+            let testX2 = character.x + 16 * SCALE - 3;
+            let testY = character.y + 16 * SCALE * 2;
+            if (testCollision(testX1, testY) || testCollision(testX2, testY)) {
+                character.vy = 0;
+                break;
+            }
+            character.y = character.y + 1;
+        }
     }
-    if (!character.touchingGround) {
-        character.vy -= 1;
-        if (character.vy < 0)
-            character.y -= character.vy;
+    if (character.vy < 0) {
+        for (let i = character.vy; i < 0; i++) {
+          let testX1 = character.x + 2;
+          let testX2 = character.x + 16 * SCALE - 3;
+          let testY = character.y + 5;
+          if (testCollision(testX1, testY) || testCollision(testX2, testY)) {
+            character.vy = 0;
+            break;
+          }
+          character.y = character.y - 1;
+        }
     }
-    if (character.touchingGround) {
-        character.vy = 0;
+    if (character.vx > 0) {
+        character.direction = 0;
+        for (let i = 0; i < character.vx; i++) {
+            let testX = character.x + 16 * SCALE - 2;
+            let testY1 = character.y + 5;
+            let testY2 = character.y + 16 * SCALE;
+            let testY3 = character.y + 16 * SCALE * 2 - 1;
+            if (testCollision(testX, testY1) || testCollision(testX, testY2) || testCollision(testX, testY3)) {
+                character.vx = 0;
+                break;
+            }
+            character.x = character.x + 1;
+        }
     }
-    if (character.touchingGround)
-        jumped = false;
-    console.log(character.vy);
-    character.touchingGround = testColision(hitbox, 1, 1) ? false : true;
-    console.log(character.touchingGround);
-    if (character.vy === 0)
-        character.jumped = false;
+
+    if (character.vx < 0) {
+        character.direction = 1;
+        for (let i = character.vx; i < 0; i++) {
+            let testX = character.x + 1;
+            let testY1 = character.y + 5;
+            let testY2 = character.y + 16 * SCALE;
+            let testY3 = character.y + 16 * SCALE * 2 - 1;
+            if (testX < 0 || testCollision(testX, testY1) || testCollision(testX, testY2) || testCollision(testX, testY3)) {
+                character.vx = 0;
+                break;
+            }
+            character.x = character.x - 1;
+        }
+    }
+
+    console.log("vy = ", character.vy);
+    character.y -= character.vy;
+
+    console.log("touchingGround:", touchingGround);
+
     blur.velocity = [character.vx, character.vy]
     running.position.set(character.x, character.y);
     standing.position.set(character.x, character.y)
@@ -192,6 +236,9 @@ app.ticker.add((time) => {
     app.stage.addChild(character.activeAnim);
 });
 
+app.loader.onError.add((error) => console.error(error));
+
+
 // ------ Title ------
 const style = new PIXI.TextStyle({
     fontFamily: 'Arial',
@@ -200,18 +247,31 @@ const style = new PIXI.TextStyle({
     dropShadowAngle: 2.1,
     dropShadowBlur: 4,
     dropShadowColor: '0x111111',
-    dropShadowDistance: 10,
+    dropShadowDistance: 5,
     fill: ['#FFE800'], // ['#00CD66', '#8B4513'],
     stroke: '#000000',
-    fontSize: 100,
+    fontSize: 28,
     fontWeight: 'lighter',
-    lineJoin: 'round',
+    lineJoin: 'floor',
     strokeThickness: 12,
-})
+});
 
+
+pixel.beginFill(0xFFFFFF);
+// for (let i = 0; i < map.length; i++)
+//     for (let y = 0; y < map[i].length; y++)
+//         if (map[i][y] == 1) {
+//             console.log("DRAW");
+//             console.log(OFFSETX, ((app.screen.width/2)-800*0.9))
+//             pixel.drawRect(y*16*SCALE+OFFSETX, i*16*SCALE+OFFSETY, 16*SCALE, 16*SCALE);
+//         }
+pixel.drawRect(10*16*SCALE+OFFSETX, 18*16*SCALE+OFFSETY, 16*SCALE, 16*SCALE);
+pixel.drawRect(380, 750-16*SCALE, 16*SCALE, 16*SCALE);
+pixel.endFill();
+app.stage.addChild(pixel);
 
 const title = new PIXI.Text('Tag Duel', style);
 title.anchor.set(0.5, 0.5);
 title.x = app.screen.width/2;
-title.y = app.screen.height/4;
+title.y = app.screen.height/20;
 // app.stage.addChild(title);

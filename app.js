@@ -12,7 +12,6 @@ const OFFSETY = (app.screen.height/2)-448*0.9
 
 document.body.appendChild(app.view);
 
-
 // ------ Map colision ------
 
 var map = [
@@ -100,6 +99,12 @@ let character = {
     jumped: false
 };
 
+let kb = {
+    ArrowRight: false,
+    ArrowLeft: false,
+    Space: false
+}
+
 const coliding = coord => !map[coord[1]][coord[0]]
 
 function testCollision(worldX, worldY) {
@@ -116,41 +121,44 @@ function testCollision(worldX, worldY) {
 
 document.addEventListener('keydown', function(e) {
     if (e.key === "ArrowRight") {
-        character.direction = 1;
-        character.vx = Math.min(8, character.vx + 2);
-        character.activeAnim = running
+        kb.ArrowRight = true;
+        character.activeAnim = running;
         running.scale.x = 4;
         standing.scale.x = 4;
     }
     if (e.key === "ArrowLeft") {
-        character.direction = -1;
+        kb.ArrowLeft = true;
         character.vx = Math.max(-8, character.vx - 2);
-        character.activeAnim = running
+        character.activeAnim = running;
         running.scale.x = -4;
         standing.scale.x = -4;
     }
     if (e.key === " " && touchingGround) {
-        touchingGround = false;
-        character.vy = -15;
+        key.Space = true;
     }
 })
 
 document.addEventListener('keyup', function(e) {
-    if (e.key === "ArrowRight" && character.direction === 1) {
+    if (e.key === "ArrowRight" && kb.ArrowRight) {
+        kb.ArrowRight = false;
         character.direction = 0;
         character.activeAnim = standing
     }
-    if (e.key === "ArrowLeft" && character.direction === -1) {
+    if (e.key === "ArrowLeft" && kb.ArrowLeft) {
+        kb.ArrowLeft = false;
         character.direction = 0;
         character.activeAnim = standing
+    }
+    if (e.key === " ") {
+        key.Space = false;
     }
 })
 
 // Listen for frame updates
 app.ticker.add((time) => {
 
-    console.log("x =", Math.floor((character.x+OFFSETX)/(16*SCALE))-4, "y =", Math.floor((character.y+OFFSETY)/(16*SCALE))-3)
-    console.log("TRUEx =", character.x, "TRUEy =", character.y)
+    // console.log("x =", Math.floor((character.x+OFFSETX)/(16*SCALE))-4, "y =", Math.floor((character.y+OFFSETY)/(16*SCALE))-3)
+    // console.log("TRUEx =", character.x, "TRUEy =", character.y)
 
     character.vy = Math.min(12, character.vy + 1)
     if (character.vx > 0) {
@@ -221,11 +229,24 @@ app.ticker.add((time) => {
             character.x = character.x - 1;
         }
     }
-
-    console.log("vy = ", character.vy);
-    character.y -= character.vy;
-
-    console.log("touchingGround:", touchingGround);
+    if (kb.ArrowRight) {
+        console.log("KeyRight");
+        character.direction = 0;
+        character.vx = Math.min(8, character.vx + 2);
+    }
+    if (kb.ArrowLeft) {
+        character.direction = 1;
+        character.vx = Math.max(-8, character.vx - 2);
+    }
+    if (!kb.Space && touchingGround && character.jumped) {
+        character.jumped = false;
+    }
+    if (kb.Space && touchingGround && !character.jumped) {
+        character.vy = -19;
+        character.jumped = true;
+    }
+    // console.log("vy = ", character.vy);
+    // console.log("touchingGround:", touchingGround);
 
     blur.velocity = [character.vx, character.vy]
     running.position.set(character.x, character.y);

@@ -91,7 +91,7 @@ running.animationSpeed = 0.2;
 running.play();
 
 let character = {
-    x: app.screen.width/2.5, y: 750,//app.screen.height/1.26,
+    x: app.screen.width/2.5, y: 500,//app.screen.height/1.26,
     vx: 10, vy: 0,
     direction: 0,
     activeAnim: standing,
@@ -114,9 +114,11 @@ function testCollision(worldX, worldY) {
         [Math.floor((worldX-OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))-1],
         [Math.floor((worldX-OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))-2]
     ]
-    if (hitbox.some(coliding))
-        return false;
-    return true;
+    if (hitbox.some(coliding)) {
+        console.log("Coliding !!");
+        return true;
+    }
+    return false;
 }
 
 document.addEventListener('keydown', function(e) {
@@ -128,13 +130,12 @@ document.addEventListener('keydown', function(e) {
     }
     if (e.key === "ArrowLeft") {
         kb.ArrowLeft = true;
-        character.vx = Math.max(-8, character.vx - 2);
         character.activeAnim = running;
         running.scale.x = -4;
         standing.scale.x = -4;
     }
-    if (e.key === " " && touchingGround) {
-        key.Space = true;
+    if (e.key === " ") {
+        kb.Space = true;
     }
 })
 
@@ -150,7 +151,7 @@ document.addEventListener('keyup', function(e) {
         character.activeAnim = standing
     }
     if (e.key === " ") {
-        key.Space = false;
+        kb.Space = false;
     }
 })
 
@@ -181,7 +182,7 @@ app.ticker.add((time) => {
             let testX1 = character.x + 2;
             let testX2 = character.x + 16 * SCALE - 3;
             let testY = character.y + 16 * SCALE * 2;
-            if (testCollision(testX1, testY) || testCollision(testX2, testY)) {
+            if (testY > 28 * 16 * SCALE || testCollision(testX1, testY) || testCollision(testX2, testY)) {
                 character.vy = 0;
                 break;
             }
@@ -190,14 +191,14 @@ app.ticker.add((time) => {
     }
     if (character.vy < 0) {
         for (let i = character.vy; i < 0; i++) {
-          let testX1 = character.x + 2;
-          let testX2 = character.x + 16 * SCALE - 3;
-          let testY = character.y + 5;
-          if (testCollision(testX1, testY) || testCollision(testX2, testY)) {
-            character.vy = 0;
-            break;
-          }
-          character.y = character.y - 1;
+            let testX1 = character.x + 2;
+            let testX2 = character.x + 16 * SCALE - 3;
+            let testY = character.y + 5;
+            if (testCollision(testX1, testY) || testCollision(testX2, testY)) {
+                    character.vy = 0;
+                    break;
+            }
+            character.y = character.y - 1;
         }
     }
     if (character.vx > 0) {
@@ -230,7 +231,6 @@ app.ticker.add((time) => {
         }
     }
     if (kb.ArrowRight) {
-        console.log("KeyRight");
         character.direction = 0;
         character.vx = Math.min(8, character.vx + 2);
     }

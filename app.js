@@ -66,6 +66,8 @@ app.stage.addChild(mapSprite);
 
 const blur = new PIXI.filters.MotionBlurFilter([0, 0], 5);
 
+var animations = [];
+
 let textures = []
 for (let i = 0; i < 4; i++) {
     const texture = PIXI.Texture.from(`./character/adventurer-idle-0${i}.png`);
@@ -74,8 +76,9 @@ for (let i = 0; i < 4; i++) {
 const standing = new PIXI.AnimatedSprite(textures);
 standing.scale.set(4, 4)
 standing.anchor.set(0.5)
-standing.animationSpeed = 0.1
+standing.animationSpeed = 0.1;
 standing.play();
+animations.push(standing);
 
 textures = []
 for (let i = 0; i < 6; i++) {
@@ -87,8 +90,23 @@ running.filters = [blur]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
 running.scale.set(4, 4);
 running.anchor.set(0.5);
 running.animationSpeed = 0.2;
-running.animationSpeed = 0.2;
 running.play();
+animations.push(running);
+
+textures = []
+for (let i = 0; i < 3; i++) {
+    const texture = PIXI.Texture.from(`./character/adventurer-jump-0${i}.png`);
+    textures.push(texture);
+}
+const jumping = new PIXI.AnimatedSprite(textures);
+jumping.filters = [blur]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
+jumping.scale.set(4, 4);
+jumping.anchor.set(0.5);
+jumping.animationSpeed = 0.2;
+jumping.animationSpeed = 0.2;
+jumping.play();
+
+animations.push(jumping);
 
 let character = {
     x: app.screen.width/3, y: 700,//app.screen.height/1.26,
@@ -109,10 +127,10 @@ const coliding = coord => map[coord[1]][coord[0]] == 0;
 
 function testCollision(worldX, worldY) {
     let hitbox = [
-        [Math.floor((worldX+OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))+1],
-        [Math.floor((worldX+OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))],
-        [Math.floor((worldX+OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))-1],
-        [Math.floor((worldX+OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))-2]
+        [Math.floor((worldX-3*16*SCALE+OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY-0.5*16*SCALE)/(16*SCALE))+1],
+        [Math.floor((worldX-3*16*SCALE+OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY-0.5*16*SCALE)/(16*SCALE))],
+        [Math.floor((worldX-3*16*SCALE+OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY-0.5*16*SCALE)/(16*SCALE))-1],
+        // [Math.floor((worldX-3*16*SCALE+OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY-0.5*16*SCALE)/(16*SCALE))-2]
     ]
     // console.log(
     //     map[hitbox[0][1]][hitbox[0][0]],
@@ -130,19 +148,18 @@ document.addEventListener('keydown', function(e) {
     if (e.key === "ArrowRight") {
         kb.ArrowRight = true;
         character.activeAnim = running;
-        running.scale.x = 4;
-        standing.scale.x = 4;
+        animations.forEach(x => x.scale.x = 4);
     }
     if (e.key === "ArrowLeft") {
         kb.ArrowLeft = true;
         character.activeAnim = running;
-        running.scale.x = -4;
-        standing.scale.x = -4;
+        animations.forEach(x => x.scale.x = -4);
     }
     if (e.key === " ") {
         kb.Space = true;
+        character.activeAnim = jumping;
     }
-})
+});
 
 document.addEventListener('keyup', function(e) {
     if (e.key === "ArrowRight" && kb.ArrowRight) {
@@ -162,7 +179,7 @@ document.addEventListener('keyup', function(e) {
     if (e.key === " ") {
         kb.Space = false;
     }
-})
+});
 
 // Listen for frame updates
 app.ticker.add((time) => {
@@ -177,7 +194,6 @@ app.ticker.add((time) => {
     if (character.vx < 0) {
         character.vx += 1;
     }
-    console.log("vx =", character.vx);
 
     let touchingGround = testCollision(
         character.x + 2,
@@ -186,11 +202,10 @@ app.ticker.add((time) => {
         character.x + 16 * SCALE - 3,
         character.y + 16 * SCALE * 2 + 1
     );
-    console.log("touchingGround: ", touchingGround);
     if (character.vy > 0) {
         for (let i = 0; i < character.vy; i++) {
             let testX1 = character.x + 2;
-            let testX2 = character.x + 16 * SCALE - 3;
+            let testX2 = character.x + 16 * SCALE *1.5 - 3;
             let testY = character.y + 16 * SCALE * 2;
             if (testY > 28 * 16 * SCALE || testCollision(testX1,testY) || testCollision(testX2, testY)) {
                 character.vy = 0;
@@ -202,7 +217,7 @@ app.ticker.add((time) => {
     if (character.vy < 0) {
         for (let i = character.vy; i < 0; i++) {
             let testX1 = character.x + 2;
-            let testX2 = character.x + 16 * SCALE - 3;
+            let testX2 = character.x + 16 * SCALE * 1.5;
             let testY = character.y + 5;
             if (testCollision(testX1, testY) || testCollision(testX2, testY)) {
                     character.vy = 0;
@@ -214,7 +229,7 @@ app.ticker.add((time) => {
     if (character.vx > 0) {
         character.direction = 0;
         for (let i = 0; i < character.vx; i++) {
-            let testX = character.x + 16 * SCALE - 2;
+            let testX = character.x + 16 * SCALE * 2 - 2;
             let testY1 = character.y + 5;
             let testY2 = character.y + 16 * SCALE;
             let testY3 = character.y + 16 * SCALE * 2 - 1;
@@ -258,19 +273,17 @@ app.ticker.add((time) => {
     // console.log("vy = ", character.vy);
     // console.log("touchingGround:", touchingGround);
 
-    blur.velocity = [character.vx, character.vy]
-    running.position.set(character.x, character.y);
-    standing.position.set(character.x, character.y)
-    running.visible = false
-    standing.visible = false
-    character.activeAnim.visible = true
+    blur.velocity = [character.vx, character.vy];
+    animations.forEach(x => x.visible = false);
+    character.activeAnim.position.set(character.x, character.y);
+    character.activeAnim.visible = true;
     app.stage.addChild(character.activeAnim);
 });
 
 app.loader.onError.add((error) => console.error(error));
 
 pixel.beginFill(0xFFFFFF);
-pixel.drawRect(character.x + 2 + OFFSETX, character.y + 16 * SCALE + OFFSETY, 16*SCALE, 16*SCALE);
+// pixel.drawRect(character.x + 2 + OFFSETX, character.y + 16 * SCALE + OFFSETY, 16*SCALE, 16*SCALE);
 // pixel.drawRect(character.x + 16 * SCALE - 3 + OFFSETX, character.y + 16 * SCALE * 4 - OFFSETY, 16*SCALE, 16*SCALE);
 pixel.endFill();
 app.stage.addChild(pixel);

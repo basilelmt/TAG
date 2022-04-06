@@ -91,7 +91,7 @@ running.animationSpeed = 0.2;
 running.play();
 
 let character = {
-    x: app.screen.width/2.5, y: 500,//app.screen.height/1.26,
+    x: app.screen.width/3, y: 700,//app.screen.height/1.26,
     vx: 10, vy: 0,
     direction: 0,
     activeAnim: standing,
@@ -105,17 +105,22 @@ let kb = {
     Space: false
 }
 
-const coliding = coord => !map[coord[1]][coord[0]]
+const coliding = coord => map[coord[1]][coord[0]] == 0;
 
 function testCollision(worldX, worldY) {
     let hitbox = [
-        [Math.floor((worldX-OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))+1],
-        [Math.floor((worldX-OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))],
-        [Math.floor((worldX-OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))-1],
-        [Math.floor((worldX-OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))-2]
+        [Math.floor((worldX+OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))+1],
+        [Math.floor((worldX+OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))],
+        [Math.floor((worldX+OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))-1],
+        [Math.floor((worldX+OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY)/(16*SCALE))-2]
     ]
+    // console.log(
+    //     map[hitbox[0][1]][hitbox[0][0]],
+    //     map[hitbox[1][1]][hitbox[1][0]],
+    //     map[hitbox[2][1]][hitbox[2][0]],
+    //     map[hitbox[3][1]][hitbox[3][0]],
+    // );
     if (hitbox.some(coliding)) {
-        console.log("Coliding !!");
         return true;
     }
     return false;
@@ -142,13 +147,17 @@ document.addEventListener('keydown', function(e) {
 document.addEventListener('keyup', function(e) {
     if (e.key === "ArrowRight" && kb.ArrowRight) {
         kb.ArrowRight = false;
-        character.direction = 0;
-        character.activeAnim = standing
+        if (!kb.ArrowLeft) {
+            character.direction = 0;
+            character.activeAnim = standing
+        }
     }
     if (e.key === "ArrowLeft" && kb.ArrowLeft) {
         kb.ArrowLeft = false;
-        character.direction = 0;
-        character.activeAnim = standing
+        if (!kb.ArrowRight) {
+            character.direction = 0;
+            character.activeAnim = standing
+        }
     }
     if (e.key === " ") {
         kb.Space = false;
@@ -169,20 +178,21 @@ app.ticker.add((time) => {
         character.vx += 1;
     }
     console.log("vx =", character.vx);
+
     let touchingGround = testCollision(
         character.x + 2,
-        character.y + 16 * SCALE * 2 + 1
+        character.y + 16 * SCALE + 10
       ) || testCollision(
         character.x + 16 * SCALE - 3,
         character.y + 16 * SCALE * 2 + 1
     );
-
+    console.log("touchingGround: ", touchingGround);
     if (character.vy > 0) {
         for (let i = 0; i < character.vy; i++) {
             let testX1 = character.x + 2;
             let testX2 = character.x + 16 * SCALE - 3;
             let testY = character.y + 16 * SCALE * 2;
-            if (testY > 28 * 16 * SCALE || testCollision(testX1, testY) || testCollision(testX2, testY)) {
+            if (testY > 28 * 16 * SCALE || testCollision(testX1,testY) || testCollision(testX2, testY)) {
                 character.vy = 0;
                 break;
             }
@@ -242,7 +252,7 @@ app.ticker.add((time) => {
         character.jumped = false;
     }
     if (kb.Space && touchingGround && !character.jumped) {
-        character.vy = -19;
+        character.vy = -20;
         character.jumped = true;
     }
     // console.log("vy = ", character.vy);
@@ -259,40 +269,8 @@ app.ticker.add((time) => {
 
 app.loader.onError.add((error) => console.error(error));
 
-
-// ------ Title ------
-const style = new PIXI.TextStyle({
-    fontFamily: 'Arial',
-    dropShadow: true,
-    dropShadowAlpha: 0.8,
-    dropShadowAngle: 2.1,
-    dropShadowBlur: 4,
-    dropShadowColor: '0x111111',
-    dropShadowDistance: 5,
-    fill: ['#FFE800'], // ['#00CD66', '#8B4513'],
-    stroke: '#000000',
-    fontSize: 28,
-    fontWeight: 'lighter',
-    lineJoin: 'floor',
-    strokeThickness: 12,
-});
-
-
 pixel.beginFill(0xFFFFFF);
-// for (let i = 0; i < map.length; i++)
-//     for (let y = 0; y < map[i].length; y++)
-//         if (map[i][y] == 1) {
-//             console.log("DRAW");
-//             console.log(OFFSETX, ((app.screen.width/2)-800*0.9))
-//             pixel.drawRect(y*16*SCALE+OFFSETX, i*16*SCALE+OFFSETY, 16*SCALE, 16*SCALE);
-//         }
-pixel.drawRect(10*16*SCALE+OFFSETX, 18*16*SCALE+OFFSETY, 16*SCALE, 16*SCALE);
-pixel.drawRect(380, 750-16*SCALE, 16*SCALE, 16*SCALE);
+pixel.drawRect(character.x + 2 + OFFSETX, character.y + 16 * SCALE + OFFSETY, 16*SCALE, 16*SCALE);
+// pixel.drawRect(character.x + 16 * SCALE - 3 + OFFSETX, character.y + 16 * SCALE * 4 - OFFSETY, 16*SCALE, 16*SCALE);
 pixel.endFill();
 app.stage.addChild(pixel);
-
-const title = new PIXI.Text('Tag Duel', style);
-title.anchor.set(0.5, 0.5);
-title.x = app.screen.width/2;
-title.y = app.screen.height/20;
-// app.stage.addChild(title);

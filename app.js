@@ -103,10 +103,21 @@ jumping.filters = [blur]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
 jumping.scale.set(4, 4);
 jumping.anchor.set(0.5);
 jumping.animationSpeed = 0.2;
-jumping.animationSpeed = 0.2;
-jumping.play();
-
 animations.push(jumping);
+
+textures = []
+for (let i = 0; i < 4; i++) {
+    const texture = PIXI.Texture.from(`./character/adventurer-smrslt-0${i}.png`);
+    textures.push(texture);
+}
+const rolling = new PIXI.AnimatedSprite(textures);
+rolling.filters = [blur]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
+rolling.scale.set(4, 4);
+rolling.anchor.set(0.5);
+rolling.animationSpeed = 0.2;
+rolling.play()
+animations.push(rolling);
+
 
 let character = {
     x: app.screen.width/3, y: 700,//app.screen.height/1.26,
@@ -144,6 +155,11 @@ function testCollision(worldX, worldY) {
     return false;
 }
 
+jumping.onLoop = function () {
+    jumping.stop();
+    character.activeAnim = rolling;
+};
+
 document.addEventListener('keydown', function(e) {
     if (e.key === "ArrowRight") {
         kb.ArrowRight = true;
@@ -157,7 +173,6 @@ document.addEventListener('keydown', function(e) {
     }
     if (e.key === " ") {
         kb.Space = true;
-        character.activeAnim = jumping;
     }
 });
 
@@ -202,10 +217,11 @@ app.ticker.add((time) => {
         character.x + 16 * SCALE - 3,
         character.y + 16 * SCALE * 2 + 1
     );
+    console.log(touchingGround);
     if (character.vy > 0) {
         for (let i = 0; i < character.vy; i++) {
             let testX1 = character.x + 2;
-            let testX2 = character.x + 16 * SCALE *1.5 - 3;
+            let testX2 = character.x + 16 * SCALE * 1.5 - 3;
             let testY = character.y + 16 * SCALE * 2;
             if (testY > 28 * 16 * SCALE || testCollision(testX1,testY) || testCollision(testX2, testY)) {
                 character.vy = 0;
@@ -268,6 +284,9 @@ app.ticker.add((time) => {
     }
     if (kb.Space && touchingGround && !character.jumped) {
         character.vy = -20;
+        character.activeAnim = jumping;
+        jumping.currentFrame = 0;
+        jumping.play();
         character.jumped = true;
     }
     // console.log("vy = ", character.vy);

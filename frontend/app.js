@@ -3,7 +3,9 @@ const socket = io()
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
 const id = []
+var other_player_info = {};
 const SCALE = 1.5
+var time = Date.now();
 
 socket.on('playerInfo', (data) => {
     id.push(data.name);
@@ -69,6 +71,7 @@ var map = [
     "00000000000000000000000000000000000000000000000000"
 ];
 
+
 // ------ Backgfloor image ------
 const mapSprite = PIXI.Sprite.from('../ressources/terrain.png');
 
@@ -105,6 +108,8 @@ standing.scale.set(3, )
 standing.anchor.set(0.5)
 standing.animationSpeed = 0.1;
 standing.play();
+console.log(standing.name);
+standing.name = "standing";
 animations.push(standing);
 
 textures = []
@@ -118,6 +123,7 @@ running.scale.set(3, );
 running.anchor.set(0.5);
 running.animationSpeed = 0.2;
 running.play();
+running.name = "running";
 animations.push(running);
 
 textures = []
@@ -130,6 +136,7 @@ jumping.filters = [blur]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
 jumping.scale.set(3, );
 jumping.anchor.set(0.5);
 jumping.animationSpeed = 0.2;
+jumping.name = "jumping";
 animations.push(jumping);
 
 textures = []
@@ -143,6 +150,7 @@ rolling.scale.set(3, );
 rolling.anchor.set(0.5);
 rolling.animationSpeed = 0.2;
 rolling.play()
+rolling.name = "rolling";
 animations.push(rolling);
 
 textures = []
@@ -156,6 +164,7 @@ falling.scale.set(3, );
 falling.anchor.set(0.5);
 falling.animationSpeed = 0.1;
 falling.play()
+falling.name = "falling";
 animations.push(falling);
 
 textures = []
@@ -168,6 +177,7 @@ initSlide.filters = [blur]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
 initSlide.scale.set(3, );
 initSlide.anchor.set(0.5);
 initSlide.animationSpeed = 0.4;
+initSlide.name = "initSlide";
 animations.push(initSlide);
 
 textures = []
@@ -181,6 +191,7 @@ endSlide.scale.set(3, );
 endSlide.anchor.set(0.5);
 endSlide.animationSpeed = 0.2;
 endSlide.play()
+endSlide.name = "endSlide";
 animations.push(endSlide);
 
 textures = []
@@ -194,7 +205,19 @@ sliding.scale.set(3, );
 sliding.anchor.set(0.5);
 sliding.animationSpeed = 0.2;
 sliding.play()
+sliding.name = "sliding";
 animations.push(sliding);
+
+function clone_animations(anim) {
+    const new_anim = new PIXI.AnimatedSprite(anim.textures);
+    new_anim.filters = anim.filters; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
+    new_anim.scale = anim.scale;
+    new_anim.anchor.set(0.5);
+    new_anim.animationSpeed = anim.animationSpeed;
+    new_anim.play()
+    return new_anim;
+}
+
 
 // ------------- Faire slide après une chute + anim chute
 
@@ -214,11 +237,33 @@ var changeColor = new PIXI.filters.ColorReplaceFilter();
 animations.forEach(x => x.filters = [changeColor, blur]);
 // animations.forEach(x => x.scale.set(SCALE, SCALE));
 
+var otherPlayer = {
+    x: 0,
+    y: 0,
+    activeAnimName: "standing",
+    direction: "right",
+    activeAnim: clone_animations(standing),
+    setValues(response) {
+        this.x = response.x;
+        this.y = response.y;
+        this.activeAnimName = response.activeAnim;
+        this.direction = response.direction;
+        // this.activeAnim =  get_anim_from_name(response.activeAnim);
+        //     animations.forEach(function(anim) {
+        //         if (anim.name === response.activeAnim) {
+        //             console.log("animation found:", anim.name);
+        //             return anim;
+        //         }
+        //     });
+    }
+}
+
 let character = {
     x: app.screen.width/3, y: app.screen.height/3,//app.screen.height/1.26,
     vx: 10, vy: 0,
     direction: 0,
     activeAnim: standing,
+    activeAnimName: "standing",
     jumped: false
 };
 
@@ -229,9 +274,24 @@ let kb = {
     Space: false
 }
 
-// const coliding = coord => map[coord[1]][coord[0]] == 0;
+function get_anim_from_name(name) {
+    animations.forEach(function(anim) {
+        if (anim.name === name) {
+            console.log("anim: ", anim);
+            return anim;
+        }
+    });
+}
 
-function coliding (coord) {
+function send_data() {
+    socket.emit('trade_player_pos', character.x, character.y, character.activeAnim.name, standing.scale.x == 3 ? "right" : "left", id[0], (response) => {
+        otherPlayer.setValues(response);
+    });
+}
+
+const coliding = coord => map[coord[1]][coord[0]] == 0;
+
+function debug_coliding (coord) {
     try {
         return map[coord[1]][coord[0]] == 0;
     } catch {
@@ -240,6 +300,7 @@ function coliding (coord) {
     }
 }
 
+
 function testCollision(worldX, worldY, canStep=false) {
     let hitbox = [
         [Math.floor((worldX-16*SCALE)/(16*SCALE)), Math.floor((worldY-16*SCALE*0.8)/(16*SCALE))+1],
@@ -247,14 +308,6 @@ function testCollision(worldX, worldY, canStep=false) {
         [Math.floor((worldX-16*SCALE)/(16*SCALE)), Math.floor((worldY-16*SCALE*0.8)/(16*SCALE))-1],
         // [Math.floor((worldX-3*16*SCALE+OFFSETX)/(16*SCALE)), Math.floor((worldY-OFFSETY-0.5*16*SCALE)/(16*SCALE))-2]
     ]
-    if (canStep)
-        console.log(
-            "block:",
-            `[${hitbox[0][1]}][${hitbox[0][0]}]`,
-            map[hitbox[0][1]][hitbox[0][0]],
-            map[hitbox[1][1]][hitbox[1][0]],
-            map[hitbox[2][1]][hitbox[2][0]],
-        );
     if (coliding(hitbox[0]) && !coliding([hitbox[1][0], Math.floor((worldY)/(16*SCALE))]) && canStep) { // Math.floor((worldY+24-0.5*16*SCALE)/(16*SCALE))
         character.y -= 16*SCALE;
     }
@@ -285,7 +338,7 @@ document.addEventListener('keydown', function(e) {
         kb.ArrowLeft = true;
         if (character.activeAnim != rolling || !character.jumped)
             character.activeAnim = running;
-        animations.forEach(x => x.scale.x = -3);
+            animations.forEach(x => x.scale.x = -3);
     }
     if (e.key === "ArrowDown") {
         kb.ArrowDown = true;
@@ -333,12 +386,12 @@ document.addEventListener('keyup', function(e) {
 
 var touchingGround = false;
 
+// app.ticker.speed = 1;
 // Listen for frame updates
-app.ticker.add((time) => {
+app.ticker.add(() => {
 
     // console.log("x =", Math.floor((character.x+OFFSETX)/(16*SCALE))-4, "y =", Math.floor((character.y+OFFSETY)/(16*SCALE))-3)
     // console.log("TRUEx =", character.x, "TRUEy =", character.y)
-
     character.vy = Math.min(12, character.vy + 1)
     if (character.vx > 0) {
         character.vx -= 1;
@@ -447,25 +500,25 @@ app.ticker.add((time) => {
             character.activeAnim = running;
         else character.activeAnim = standing;
     }
-    // socket.emit("get_player_pos", (response) => {
-    //     pixel.beginFill(0xFFFFFF);
-    //     pixel.drawRect(response.x, response.y, 16*SCALE);
-    //     pixel.endFill();
-    // });
-    // console.log("vy = ", character.vy);
-    // console.log("touchingGround:", touchingGround);
-
+    // if (Date.now() - time > 500) {
+        // }
+    send_data();
     blur.velocity = [character.vx, character.vy];
     animations.forEach(x => x.visible = false);
     character.activeAnim.position.set(character.x, character.y);
+    otherPlayer.activeAnim.position.set(otherPlayer.x, otherPlayer.y);
+    otherPlayer.activeAnim.scale.x = otherPlayer.direction === "left" ? -3 : 3
     character.activeAnim.visible = true;
+    otherPlayer.activeAnim.visible = true;
+    // console.log(otherPlayer);
+    app.stage.addChild(otherPlayer.activeAnim);
     app.stage.addChild(character.activeAnim);
 });
 
 app.loader.onError.add((error) => console.error(error));
 
-pixel.beginFill(0xFFFFFF);
-// pixel.drawRect(character.x + 2 + OFFSETX, character.y + 16 * SCALE + OFFSETY, 16*SCALE, 16*SCALE);
-// pixel.drawRect(character.x + 16 * SCALE - 3 + OFFSETX, character.y + 16 * SCALE * 4 - OFFSETY, 16*SCALE, 16*SCALE);
-pixel.endFill();
-app.stage.addChild(pixel);
+// pixel.beginFill(0xFFFFFF);
+// console.log(otherPlayer);
+// pixel.drawRect(otherPlayer.x[0], otherPlayer.y[0], 16*SCALE, 16*SCALE);
+// pixel.endFill();
+// app.stage.addChild(pixel);

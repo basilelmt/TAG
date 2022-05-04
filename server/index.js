@@ -13,16 +13,29 @@ var players = [];
 
 var game_data = {
     'player1': {
+        role: "chaser",
         x: 0,
         y: 0,
         activeAnim: "standing",
-        direction: "right"
+        direction: "right",
+        skinIndex: 0
     },
     'player2': {
+        role: "chased",
         x: 0,
         y: 0,
         activeAnim: "standing",
-        direction: "right"
+        direction: "right",
+        skinIndex: 0
+    },
+    setValues(data) {
+        let player = data.id === "player:1" ? this.player1 : this.player2;
+        player.role = data.role;
+        player.x = data.x;
+        player.y = data.y;
+        player.activeAnim = data.activeAnim;
+        player.direction = data.direction;
+        player.skinIndex = data.skinIndex;
     }
 };
 
@@ -39,30 +52,16 @@ app.get('/', (req, res) => {
 
 io.on('connection', (socket) => {
     socket.name = `player:${++nb_player}`;
-    // console.log(socket.id);
     console.log(`Player${nb_player} connected.`);
     players.push(`player:${nb_player}`);
     socket.emit('playerInfo', {'players':players, 'name':socket.name});
-    socket.on('trade_player_pos', (characterx, charactery, activeAnim, direction, id, callback) => {
-        if (id === "player:1") {
-            game_data.player1.x = characterx;
-            game_data.player1.y = charactery;
-            game_data.player1.activeAnim = activeAnim;
-            game_data.player1.direction = direction;
-        } else if (id === "player:2") {
-            game_data.player2.x = characterx;
-            game_data.player2.y = charactery;
-            game_data.player2.activeAnim = activeAnim;
-            game_data.player2.direction = direction;
-        } else {
-            console.log("error in id reading");
-            console.log("id=", id);
-        }
-        console.log(game_data);
+    socket.on('trade_player_pos', (data, callback) => {
+        game_data.setValues(data);
         callback(
-            id === "player:1" ? game_data.player2 : game_data.player1
+            data.id === "player:1" ? game_data.player2 : game_data.player1
         );
     });
+    socket.on('two_player_connected', (callback) => callback(nb_player == 2));
     socket.on('disconnect', () => {
         console.log(`A player as disconnected, ${--nb_player} left.`);
     });

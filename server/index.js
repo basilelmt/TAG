@@ -26,7 +26,7 @@ var game_data = {
         direction: "right",
         skinIndex: 0
     },
-    setValues(data) {
+    setValues(data, game_state) {
         let player = data.id === "player:1" ? this.player1 : this.player2;
         player.role = data.role;
         player.x = data.x;
@@ -34,6 +34,7 @@ var game_data = {
         player.activeAnim = data.activeAnim;
         player.direction = data.direction;
         player.skinIndex = data.skinIndex;
+        this.game_state = game_state;
     }
 };
 
@@ -54,16 +55,20 @@ io.on('connection', (socket) => {
     else
         socket.name = players[0] === 'player:1' ? 'player:2' : 'player:1';
     players.push(`player:${players.length+1}`);
-    console.log(players, "there is", players.length, "players");
     console.log(`${socket.name} connected.`);
+
     socket.emit('playerInfo', {'players':players, 'name':socket.name});
-    socket.on('trade_player_pos', (data, callback) => {
-        game_data.setValues(data);
-        callback(
-            data.id === "player:1" ? game_data.player2 : game_data.player1
-        );
+
+    socket.on('trade_player_pos', (data, game_state, callback) => {
+        game_data.setValues(data, game_state);
+        callback({
+                'player_info': data.id === "player:1" ? game_data.player2 : game_data.player1,
+                'game_state': game_data.game_state
+        });
     });
+
     socket.on('two_player_connected', (callback) => callback(players.length == 2));
+
     socket.on('disconnect', () => {
         console.log(`${players[players.indexOf(socket.name)]} as disconnected.`);
         players.splice(players.indexOf(socket.name), 1);
@@ -71,5 +76,5 @@ io.on('connection', (socket) => {
 });
 
 server.listen(PORT, () => {
-    console.log(`listening on port http://localhost:${PORT}`);
+    console.log(`Server up!\n -> http://localhost:${PORT}`);
 });

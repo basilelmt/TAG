@@ -2,12 +2,15 @@ const socket = io()
 
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
+var WAIT = false;
 const id = []
 const SCALE = 1.5
 var time = Date.now();
+var bumpCounter = 0; // to control annnoying bug
 var game = {
     roles_set: false,
     both_players_connected: false,
+    game_state: 1,
     setValues(data) {
         this.both_players_connected = data
     }
@@ -90,6 +93,15 @@ for (let i = 3; i > -1; i--) {
     tmp.y = app.screen.height / 2;
     countdown.push(tmp);
 }
+
+const readyText = new PIXI.Text("READY?", endStyle);
+const goText = new PIXI.Text("GO!", endStyle);
+readyText.anchor.set(0.5);
+readyText.x = app.screen.width / 2;
+readyText.y = app.screen.height / 2;
+goText.anchor.set(0.5);
+goText.x = app.screen.width / 2;
+goText.y = app.screen.height / 2;
 
 // ------ Map colision ------
 var map = [
@@ -341,31 +353,36 @@ function send_data() {
         direction: standing.scale.x == 3 ? "right" : "left",
         skinIndex: skin_index
     }
-    socket.emit('trade_player_pos', data, (response) => {
-        otherPlayer.setValues(response);
+    socket.emit('trade_player_pos', data, game.game_state, (response) => {
+        game.game_state = response.game_state;
+        otherPlayer.setValues(response.player_info);
     });
 }
 
 const coliding = coord => map[coord[1]][coord[0]] == 0;
-
-function debug_coliding (coord) {
-    try {
-        return map[coord[1]][coord[0]] == 0;
-    } catch {
-        console.log(`ERROR !!!\n${coord} don't exist !!!`)
-        return true;
-    }
-}
-
 
 function testCollision(worldX, worldY, canStep=false) {
     let hitbox = [
         [Math.floor((worldX-16*SCALE)/(16*SCALE)), Math.floor((worldY-16*SCALE*0.8)/(16*SCALE))+1],
         [Math.floor((worldX-16*SCALE)/(16*SCALE)), Math.floor((worldY-16*SCALE*0.8)/(16*SCALE))],
         [Math.floor((worldX-16*SCALE)/(16*SCALE)), Math.floor((worldY-16*SCALE*0.8)/(16*SCALE))-1],
-    ]
-    if (coliding(hitbox[0]) && !coliding([hitbox[1][0], Math.floor((worldY)/(16*SCALE))]) && canStep) { // Math.floor((worldY+24-0.5*16*SCALE)/(16*SCALE))
+    ];
+    let otherHitbox = [
+        [Math.floor((otherPlayer.x-16*SCALE)/(16*SCALE)), Math.floor((otherPlayer.y-16*SCALE*0.8)/(16*SCALE))+3],
+        [Math.floor((otherPlayer.x-16*SCALE)/(16*SCALE)), Math.floor((otherPlayer.y-16*SCALE*0.8)/(16*SCALE))+2],
+        [Math.floor((otherPlayer.x-16*SCALE)/(16*SCALE)), Math.floor((otherPlayer.y-16*SCALE*0.8)/(16*SCALE))+1],
+    ];
+    hitbox.forEach(function(x){
+        otherHitbox.forEach(function(y){
+            if (x[0] == y[0] && x[1] == y[1] && game.both_players_connected) {
+                console.log("Colision with other player");
+                game.game_state = 2;
+            }
+        })
+    });
+    if (coliding(hitbox[0]) && !coliding([hitbox[1][0], Math.floor((worldY)/(16*SCALE))]) && canStep && bumpCounter < 3) { // Math.floor((worldY+24-0.5*16*SCALE)/(16*SCALE))
         character.y -= 16*SCALE;
+        bumpCounter++; // to avoid infinite bump
     }
     if (hitbox.some(coliding)) {
         return true;
@@ -444,24 +461,49 @@ var touchingGround = false;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-async function display_countdown()
+async function start_round()
 {
-    for (let i = 0; i < 4; i++) {
-        await sleep(1000);
-        app.stage.addChild(countdown[i]);
-        if (i > 0)
-            app.stage.removeChild(countdown[i-1]);
-    }
+    game.block_input = true;
     await sleep(1000);
-    app.stage.removeChild(countdown[3]);
+    app.stage.addChild(readyText);
+    await sleep(1300);
+    game.block_input = false;
+    app.stage.removeChild(readyText);
+    app.stage.addChild(goText);
+    await sleep(1000);
+    app.stage.removeChild(goText);
+}
+
+async function end_round()
+{
+    console.log("Chaser wins !");
+    game.game_state = 2;
+    zoomBlur.strength = 0.3;
+    zoomBlur.center = [character.x, character.y];
+    blur.velocity = [0, 0];
+    const endText = new PIXI.Text("TAG!", endStyle);
+    endText.anchor.set(0.5);
+    endText.x = app.screen.width / 2;
+    endText.y = app.screen.height / 2;
+    app.stage.addChild(endText);
+    app.stage.removeChild(roleText);
+    app.ticker.stop();
+    await sleep(3000);
+    app.ticker.start();
+    app.stage.removeChild(endText);
+    zoomBlur.strength = 0;
+    game.roles_set = false;
+    game.game_state = 1;
 }
 
 // app.ticker.speed = 1;
 // Listen for frame updates
 app.ticker.maxFPS = 60;
 app.ticker.add(() => {
-    console.log(app.ticker.FPS);
+    // console.log(app.ticker.FPS);
     // ------ Initialisation of the game if 2 players connected ------ //
+    if (game.block_input)
+        Object.keys(kb).forEach(v => kb[v] = false)
     if (!game.both_players_connected)
         socket.emit('two_player_connected', (response) => {game.setValues(response)});
     if (game.both_players_connected && !game.roles_set) {
@@ -471,9 +513,7 @@ app.ticker.add(() => {
         roleStyle.fill = ['#ffffff', id[0] === "player:1" ? '#FF2700' : '#00D8FF'], // gradient
         roleText.text = id[0] === "player:1" ? "Chaser" : "Chased";
         app.stage.addChild(roleText);
-        // app.ticker.stop();
-        display_countdown();
-        // app.ticker.start();
+        start_round();
         game.roles_set = true;
     }
     // ------ Player Movement management ------ //
@@ -495,7 +535,10 @@ app.ticker.add(() => {
             character.y + 16 * SCALE * 2
         );
     let justTouchedGround = !oldTouchedGround && touchingGround;
-
+    if (touchingGround) // maybe not opti
+        bumpCounter = 0;
+    if (touchingGround && character.activeAnim == rolling)
+        character.activeAnim = standing;
     if (kb.ArrowDown && character.activeAnim === initSlide && touchingGround && character.vy > 0) {
         if (kb.ArrowRight)
             character.vx = 10 + character.vy;
@@ -609,20 +652,13 @@ app.ticker.add(() => {
         app.stage.addChild(otherPlayer.activeAnim);
     app.stage.addChild(character.activeAnim);
 
-    if (character.x >= otherPlayer.x && character.x <= otherPlayer.x + 16*SCALE
-    && character.y >= otherPlayer.y && character.y <= otherPlayer.y + 3*16*SCALE
-    && game.both_players_connected) {
-        console.log("Chaser wins !");
-        zoomBlur.strength = 0.3;
-        zoomBlur.center = [character.x, character.y];
-        blur.velocity = [0, 0];
-        const endText = new PIXI.Text("GAME!", endStyle);
-        endText.anchor.set(0.5);
-        endText.x = app.screen.width / 2;
-        endText.y = app.screen.height / 2;
-        app.stage.addChild(endText);
-        app.stage.removeChild(roleText);
-        app.ticker.stop();
+    // if ((character.x >= otherPlayer.x && character.x <= otherPlayer.x + 16*SCALE
+    // && character.y >= otherPlayer.y && character.y <= otherPlayer.y + 3*16*SCALE
+    // && game.both_players_connected) || game.game_state == 2) {
+    //     end_round();
+    // }
+    if (game.both_players_connected && game.game_state == 2) {
+        end_round();
     }
 });
 

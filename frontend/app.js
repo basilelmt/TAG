@@ -6,11 +6,14 @@ var WAIT = false;
 const id = []
 const SCALE = 1.5
 var time = Date.now();
+var timer = 0;
 var bumpCounter = 0; // to control annnoying bug
 var game = {
     roles_set: false,
     both_players_connected: false,
     game_state: 1,
+    started: false,
+    lock_timer: false,
     setValues(data) {
         this.both_players_connected = data
     }
@@ -76,6 +79,24 @@ const endStyle = new PIXI.TextStyle({
     dropShadowDistance: 12,
 });
 
+const timerStyle = new PIXI.TextStyle({
+    fill: "#4de4ff",
+    fontSize: 800,
+    fontWeight: "bolder"
+})
+
+const fancyStyle = new PIXI.TextStyle({
+    fill: 0x000000,
+    fontSize: 200,
+    fontFamily: 'Fancy'
+});
+
+const timerText = new PIXI.Text(`${timer}`, timerStyle);
+timerText.height = app.screen.height+200;
+timerText.anchor.set(0.5);
+timerText.x = app.screen.width / 2;
+timerText.y = app.screen.height / 2;
+
 const endText = new PIXI.Text("GAME!", endStyle);
 endText.anchor.set(0.5);
 endText.x = app.screen.width / 2;
@@ -85,20 +106,21 @@ const roleText = new PIXI.Text("...", roleStyle);
 roleText.x = 50;
 roleText.y = 0;
 
-var countdown = [];
-for (let i = 3; i > -1; i--) {
-    let tmp = new PIXI.Text(i == 0 ? "GO!" : `${i}`, endStyle);
-    tmp.anchor.set(0.5);
-    tmp.x = app.screen.width / 2;
-    tmp.y = app.screen.height / 2;
-    countdown.push(tmp);
-}
+// var countdown = [];
+// for (let i = 3; i > -1; i--) {
+//     let tmp = new PIXI.Text(i == 0 ? "GO!" : `${i}`, endStyle);
+//     tmp.anchor.set(0.5);
+//     tmp.x = app.screen.width / 2;
+//     tmp.y = app.screen.height / 2;
+//     countdown.push(tmp);
+// }
 
 const readyText = new PIXI.Text("READY?", endStyle);
-const goText = new PIXI.Text("GO!", endStyle);
 readyText.anchor.set(0.5);
 readyText.x = app.screen.width / 2;
 readyText.y = app.screen.height / 2;
+
+const goText = new PIXI.Text("GO!", endStyle);
 goText.anchor.set(0.5);
 goText.x = app.screen.width / 2;
 goText.y = app.screen.height / 2;
@@ -161,7 +183,9 @@ app.stage.addChild(mapSprite);
 // app.loader.load(setup)
 
 const blur = new PIXI.filters.MotionBlurFilter([0, 0], 5);
-// const glow = new PIXI.filters.GlowFilter({outerStrength: 1});
+// const glow = new PIXI.filters.GlowFilter({outerStrength: 0, color: 0x00000});
+
+// timerText.filters = [glow]
 
 var animations = [];
 
@@ -344,6 +368,7 @@ let kb = {
     Space: false
 }
 
+
 function send_data() {
     let data = {
         id: id[0],
@@ -471,6 +496,9 @@ async function start_round()
     app.stage.removeChild(readyText);
     app.stage.addChild(goText);
     await sleep(1000);
+    app.stage.addChild(timerText);
+    app.stage.addChild(mapSprite);
+    game.started = true;
     app.stage.removeChild(goText);
 }
 
@@ -489,11 +517,23 @@ async function end_round()
     app.stage.removeChild(roleText);
     app.ticker.stop();
     await sleep(3000);
+    app.stage.removeChild(timerText);
     app.ticker.start();
     app.stage.removeChild(endText);
     zoomBlur.strength = 0;
     game.roles_set = false;
+    game.started = false;
+    timer = 0;
     game.game_state = 1;
+}
+
+async function update_timer()
+{
+    game.lock_timer = true;
+    timer++;
+    timerText.text = `${timer}`;
+    await sleep(1000);
+    game.lock_timer = false;
 }
 
 // app.ticker.speed = 1;
@@ -501,6 +541,8 @@ async function end_round()
 app.ticker.maxFPS = 60;
 app.ticker.add(() => {
     // console.log(app.ticker.FPS);
+    if (game.started === true && !game.lock_timer)
+        update_timer();
     // ------ Initialisation of the game if 2 players connected ------ //
     if (game.block_input)
         Object.keys(kb).forEach(v => kb[v] = false)
@@ -655,7 +697,7 @@ app.ticker.add(() => {
     // if ((character.x >= otherPlayer.x && character.x <= otherPlayer.x + 16*SCALE
     // && character.y >= otherPlayer.y && character.y <= otherPlayer.y + 3*16*SCALE
     // && game.both_players_connected) || game.game_state == 2) {
-    //     end_round();
+        //     end_round();
     // }
     if (game.both_players_connected && game.game_state == 2) {
         end_round();

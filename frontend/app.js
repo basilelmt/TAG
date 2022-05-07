@@ -12,6 +12,10 @@ var game = {
     roles_set: false,
     both_players_connected: false,
     game_state: 1,
+    acending_timer: true,
+    p1_is_chaser: true,
+    p1_score: 0,
+    p2_score: 0,
     started: false,
     lock_timer: false,
     setValues(data) {
@@ -106,15 +110,6 @@ const roleText = new PIXI.Text("...", roleStyle);
 roleText.x = 50;
 roleText.y = 0;
 
-// var countdown = [];
-// for (let i = 3; i > -1; i--) {
-//     let tmp = new PIXI.Text(i == 0 ? "GO!" : `${i}`, endStyle);
-//     tmp.anchor.set(0.5);
-//     tmp.x = app.screen.width / 2;
-//     tmp.y = app.screen.height / 2;
-//     countdown.push(tmp);
-// }
-
 const readyText = new PIXI.Text("READY?", endStyle);
 readyText.anchor.set(0.5);
 readyText.x = app.screen.width / 2;
@@ -124,6 +119,10 @@ const goText = new PIXI.Text("GO!", endStyle);
 goText.anchor.set(0.5);
 goText.x = app.screen.width / 2;
 goText.y = app.screen.height / 2;
+
+const scoreText = new PIXI.Text("0 - 0", endStyle)
+roleText.x = 50;
+roleText.y = 0;
 
 // ------ Map colision ------
 var map = [
@@ -523,15 +522,50 @@ async function end_round()
     zoomBlur.strength = 0;
     game.roles_set = false;
     game.started = false;
-    timer = 0;
+    game.p1_is_chaser ? game.p1_score++ : game.p2_score++
+    game.p1_is_chaser = !game.p1_is_chaser;
+    if (!game.acending_timer) // need to be before the game.acending update
+        timer = 0;
+    game.acending_timer = !game.acending_timer;
+    game.game_state = 1;
+}
+
+async function times_up()
+{
+    console.log("Chased wins !");
+    // game.game_state = 2;
+    zoomBlur.strength = 0.3;
+    // zoomBlur.center = [character.x, character.y];
+    // blur.velocity = [0, 0];
+    const endText = new PIXI.Text("UP!", endStyle);
+    endText.anchor.set(0.5);
+    endText.x = app.screen.width / 2;
+    endText.y = app.screen.height / 2;
+    app.stage.addChild(endText);
+    app.stage.removeChild(roleText);
+    app.ticker.stop();
+    await sleep(3000);
+    app.stage.removeChild(timerText);
+    app.ticker.start();
+    app.stage.removeChild(endText);
+    zoomBlur.strength = 0;
+    game.roles_set = false;
+    game.started = false;
+    game.p1_is_chaser ? game.p2_score++ : game.p1_score++
+    game.p1_is_chaser = !game.p1_is_chaser;
+    if (!game.acending_timer) // need to be before the game.acending_timer update
+        timer = 0;
+    game.acending_timer = !game.acending_timer;
     game.game_state = 1;
 }
 
 async function update_timer()
 {
     game.lock_timer = true;
-    timer++;
+    game.acending_timer ? timer++ : timer--;
     timerText.text = `${timer}`;
+    if (timer == 0)
+        times_up();
     await sleep(1000);
     game.lock_timer = false;
 }
@@ -549,11 +583,20 @@ app.ticker.add(() => {
     if (!game.both_players_connected)
         socket.emit('two_player_connected', (response) => {game.setValues(response)});
     if (game.both_players_connected && !game.roles_set) {
-        character.x = id[0] === "player:1" ? 79 : 1105;
-        character.y = id[0] === "player:1" ? 260 : 428;
-        character.activeAnim.scale.x = id[0] === "player:1" ? 3 : -3
-        roleStyle.fill = ['#ffffff', id[0] === "player:1" ? '#FF2700' : '#00D8FF'], // gradient
-        roleText.text = id[0] === "player:1" ? "Chaser" : "Chased";
+        if (id[0] === "player:1") {
+            character.x = id[0] === game.chaser_is_player_one ? 79 : 1105;
+            character.y = id[0] === game.chaser_is_player_one ? 260 : 428;
+            character.activeAnim.scale.x = id[0] === game.chaser_is_player_one ? 3 : -3
+            roleStyle.fill = ['#ffffff', id[0] === game.chaser_is_player_one ? '#FF2700' : '#00D8FF'], // gradient
+            roleText.text = id[0] === game.chaser_is_player_one ? "Chaser" : "Chased";
+        }
+        if (id[0] === "player:2") {
+            character.x = id[0] === game.chaser_is_player_one ? 1105 : 79;
+            character.y = id[0] === game.chaser_is_player_one ? 428 : 260;
+            character.activeAnim.scale.x = id[0] === game.chaser_is_player_one ? -3 : 3
+            roleStyle.fill = ['#ffffff', id[0] === game.chaser_is_player_one ? '#00D8FF' : '#FF2700'], // gradient
+            roleText.text = id[0] === game.chaser_is_player_one ? "Chased" : "Chaser";
+        }
         app.stage.addChild(roleText);
         start_round();
         game.roles_set = true;

@@ -9,13 +9,13 @@ const PORT = 3000;
 var players = [];
 
 var game_data = {
-    game_state: 1,
     'player1': {
         role: "chaser",
         x: 0,
         y: 0,
         activeAnim: "standing",
         direction: "right",
+        game_over: false,
         skinIndex: 0
     },
     'player2': {
@@ -24,9 +24,10 @@ var game_data = {
         y: 0,
         activeAnim: "standing",
         direction: "right",
+        game_over: false,
         skinIndex: 0
     },
-    setValues(data, game_state) {
+    setValues(data) {
         let player = data.id === "player:1" ? this.player1 : this.player2;
         player.role = data.role;
         player.x = data.x;
@@ -34,7 +35,7 @@ var game_data = {
         player.activeAnim = data.activeAnim;
         player.direction = data.direction;
         player.skinIndex = data.skinIndex;
-        this.game_state = game_state;
+        player.game_over = data.game_over;
     }
 };
 
@@ -43,6 +44,10 @@ app.use("/node_modules", express.static('./node_modules/'));
 app.use("/ressources", express.static('./ressources/'));
 
 app.get('/', (req, res) => {
+    res.sendFile(path.resolve('frontend/menu/index.html'));
+});
+
+app.get('/game', (req, res) => {
     if (players.length == 2)
         res.send('<h1>Sorry, lobby is full...</h1>');
     else
@@ -59,16 +64,17 @@ io.on('connection', (socket) => {
 
     socket.emit('playerInfo', {'players':players, 'name':socket.name});
 
-    socket.on('trade_player_pos', (data, game_state, callback) => {
-        game_data.setValues(data, game_state);
+    socket.on('trade_player_pos', (data, callback) => {
+        game_data.setValues(data);
         callback({
                 'player_info': data.id === "player:1" ? game_data.player2 : game_data.player1,
-                'game_state': game_data.game_state
+                'game_over': game_data.player1.game_over || game_data.player2.game_over
         });
+        game_data.player1.game_over = false;
+        game_data.player2.game_over = false;
     });
 
     socket.on('two_player_connected', (callback) => callback(players.length == 2));
-
     socket.on('disconnect', () => {
         console.log(`${players[players.indexOf(socket.name)]} as disconnected.`);
         players.splice(players.indexOf(socket.name), 1);

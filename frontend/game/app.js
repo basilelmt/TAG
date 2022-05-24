@@ -9,9 +9,11 @@ var time = Date.now();
 var timer = 0;
 var bumpCounter = 0; // to control annnoying bug
 var game = {
+    block_input: false,
     roles_set: false,
     both_players_connected: false,
-    game_state: 1,
+    other_player_left: false,
+    game_over: false,
     acending_timer: true,
     p1_is_chaser: true,
     p1_score: 0,
@@ -19,6 +21,8 @@ var game = {
     started: false,
     lock_timer: false,
     setValues(data) {
+        if (this.both_players_connected && !data)
+            this.other_player_left = true;
         this.both_players_connected = data
     }
 };
@@ -26,8 +30,6 @@ var game = {
 socket.on('playerInfo', (data) => {
     id.push(data.name);
 });
-
-console.log(id);
 
 const app = new PIXI.Application({
     width: 800*SCALE,
@@ -124,6 +126,15 @@ const scoreText = new PIXI.Text("0 - 0", endStyle)
 roleText.x = 50;
 roleText.y = 0;
 
+const waitingText = new PIXI.Text("Waiting for another player to join...", { fontSize:30 });
+waitingText.anchor.set(0.5);
+waitingText.x = app.screen.width / 2;
+waitingText.y = app.screen.height / 2;
+
+const p1ScoreText = new PIXI.Text("0", roleStyle)
+
+const p2ScoreText = new PIXI.Text("0", roleStyle)
+
 // ------ Map colision ------
 var map = [
     "00000000000000000000000000000000000000000000000000",
@@ -169,7 +180,7 @@ mapSprite.y = app.screen.height / 2;
 mapSprite.scale.set(SCALE, SCALE);
 //800, 448
 
-const sky = PIXI.Sprite.from('../ressources/sky.png');
+const sky = PIXI.Sprite.from('../ressources/sky.png'); // #00D8FF
 sky.anchor.set(0.5);
 sky.x = app.screen.width / 2;
 sky.y = app.screen.height / 2;
@@ -182,6 +193,8 @@ app.stage.addChild(mapSprite);
 // app.loader.load(setup)
 
 const blur = new PIXI.filters.MotionBlurFilter([0, 0], 5);
+const trail = new PIXI.filters.RGBSplitFilter([0, 0], [0, 0], [0, 0])
+// trail([-10, 0], [0, 0], [10, 0])
 // const glow = new PIXI.filters.GlowFilter({outerStrength: 0, color: 0x00000});
 
 // timerText.filters = [glow]
@@ -207,7 +220,7 @@ for (let i = 0; i < 6; i++) {
     textures.push(texture);
 }
 const running = new PIXI.AnimatedSprite(textures);
-running.filters = [blur]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
+running.filters = [blur, trail]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
 running.scale.set(3, );
 running.anchor.set(0.5);
 running.animationSpeed = 0.2;
@@ -221,7 +234,7 @@ for (let i = 0; i < 3; i++) {
     textures.push(texture);
 }
 const jumping = new PIXI.AnimatedSprite(textures);
-jumping.filters = [blur]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
+jumping.filters = [blur, trail]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
 jumping.scale.set(3, );
 jumping.anchor.set(0.5);
 jumping.animationSpeed = 0.2;
@@ -234,7 +247,7 @@ for (let i = 0; i < 4; i++) {
     textures.push(texture);
 }
 const rolling = new PIXI.AnimatedSprite(textures);
-rolling.filters = [blur]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
+rolling.filters = [blur, trail]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
 rolling.scale.set(3, );
 rolling.anchor.set(0.5);
 rolling.animationSpeed = 0.2;
@@ -248,7 +261,7 @@ for (let i = 0; i < 2; i++) {
     textures.push(texture);
 }
 const falling = new PIXI.AnimatedSprite(textures);
-falling.filters = [blur]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
+falling.filters = [blur, trail]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
 falling.scale.set(3, );
 falling.anchor.set(0.5);
 falling.animationSpeed = 0.1;
@@ -262,7 +275,7 @@ for (let i = 2; i >= 0; i--) {
     textures.push(texture);
 }
 const initSlide = new PIXI.AnimatedSprite(textures);
-initSlide.filters = [blur]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
+initSlide.filters = [blur, trail]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
 initSlide.scale.set(3, );
 initSlide.anchor.set(0.5);
 initSlide.animationSpeed = 0.4;
@@ -275,7 +288,7 @@ for (let i = 0; i < 3; i++) {
     textures.push(texture);
 }
 const endSlide = new PIXI.AnimatedSprite(textures);
-endSlide.filters = [blur]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
+endSlide.filters = [blur, trail]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
 endSlide.scale.set(3, );
 endSlide.anchor.set(0.5);
 endSlide.animationSpeed = 0.2;
@@ -289,7 +302,7 @@ for (let i = 0; i < 2; i++) {
     textures.push(texture);
 }
 const sliding = new PIXI.AnimatedSprite(textures);
-sliding.filters = [blur]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
+sliding.filters = [blur, trail]; //MotionBlurFilter //GlowFilter //ColorOverlayFilter
 sliding.scale.set(3, );
 sliding.anchor.set(0.5);
 sliding.animationSpeed = 0.2;
@@ -330,7 +343,7 @@ var skin_index = 0;
 
 var changeColor = new PIXI.filters.ColorReplaceFilter();
 var otherChangeColor = new PIXI.filters.ColorReplaceFilter();
-animations.forEach(x => x.filters = [changeColor, blur]); // glow
+animations.forEach(x => x.filters = [changeColor, blur, trail]); // glow
 other_player_animations.forEach(x => x.filters = [otherChangeColor]); //blur
 // animations.forEach(x => x.scale.set(SCALE, SCALE));
 
@@ -357,14 +370,17 @@ let character = {
     direction: 0,
     activeAnim: standing,
     activeAnimName: "standing",
-    jumped: false
+    jumped: false,
+    dashing: false,
+    dashed: false
 };
 
 let kb = {
     ArrowRight: false,
     ArrowLeft: false,
     ArrowDown: false,
-    Space: false
+    Space: false,
+    Akey: false
 }
 
 
@@ -375,10 +391,12 @@ function send_data() {
         y: character.y,
         activeAnim: character.activeAnim.name,
         direction: standing.scale.x == 3 ? "right" : "left",
-        skinIndex: skin_index
+        skinIndex: skin_index,
+        game_over: game.game_over
     }
-    socket.emit('trade_player_pos', data, game.game_state, (response) => {
-        game.game_state = response.game_state;
+    socket.emit('trade_player_pos', data, (response) => {
+        if (game.started)
+            game.game_over = response.game_over;
         otherPlayer.setValues(response.player_info);
     });
 }
@@ -398,9 +416,9 @@ function testCollision(worldX, worldY, canStep=false) {
     ];
     hitbox.forEach(function(x){
         otherHitbox.forEach(function(y){
-            if (x[0] == y[0] && x[1] == y[1] && game.both_players_connected) {
+            if (x[0] == y[0] && x[1] == y[1] && !game.block_input && game.started) {
                 console.log("Colision with other player");
-                game.game_state = 2;
+                game.game_over = true;
             }
         })
     });
@@ -428,13 +446,15 @@ document.addEventListener('keydown', function(e) {
     if (e.key === "ArrowRight") {
         kb.ArrowRight = true;
         if (character.activeAnim != rolling || !character.jumped)
-            character.activeAnim = running;
+            if (!game.block_input)
+                character.activeAnim = running;
         animations.forEach(x => x.scale.x = 3);
     }
     if (e.key === "ArrowLeft") {
         kb.ArrowLeft = true;
         if (character.activeAnim != rolling || !character.jumped)
-            character.activeAnim = running;
+            if (!game.block_input)
+                character.activeAnim = running;
             animations.forEach(x => x.scale.x = -3);
     }
     if (e.key === "ArrowDown") {
@@ -450,12 +470,14 @@ document.addEventListener('keydown', function(e) {
     if (e.key === " ") {
         kb.Space = true;
     }
-    if (e.key == "a") {
-        if (character.vx > 0)
-            character.vx += 100;
-        if (character.vx < 0)
-            character.vx -= 100;
+    if (e.key === "ArrowUp") {
+        kb.Space = true;
     }
+    if (e.key == "a") {
+        kb.Akey = true;
+    }
+    if (e.key == "r")
+        window.location.reload();
 });
 
 document.addEventListener('keyup', function(e) {
@@ -479,11 +501,29 @@ document.addEventListener('keyup', function(e) {
     if (e.key === " ") {
         kb.Space = false;
     }
+    if (e.key === "ArrowUp") {
+        kb.Space = false;
+    }
 });
 
 var touchingGround = false;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function dash()
+{
+    trail.blue = [character.direction == 0 ? 40 : -40, 0];
+    trail.red = [0, 0];
+    trail.green = [character.direction == 0 ? 20 : -20, 0];
+    character.dashing = true;
+    await sleep(200);
+    trail.red = [0, 0];
+    trail.green = [0, 0];
+    trail.blue = [0, 0];
+    character.dashing = false;
+    kb.Akey = false;
+    character.dashed = true;
+}
 
 async function start_round()
 {
@@ -494,6 +534,9 @@ async function start_round()
     game.block_input = false;
     app.stage.removeChild(readyText);
     app.stage.addChild(goText);
+    app.stage.removeChild(p1ScoreText);
+    app.stage.removeChild(p2ScoreText);
+    game.game_over = false;
     await sleep(1000);
     app.stage.addChild(timerText);
     app.stage.addChild(mapSprite);
@@ -503,8 +546,6 @@ async function start_round()
 
 async function end_round()
 {
-    console.log("Chaser wins !");
-    game.game_state = 2;
     zoomBlur.strength = 0.3;
     zoomBlur.center = [character.x, character.y];
     blur.velocity = [0, 0];
@@ -522,12 +563,15 @@ async function end_round()
     zoomBlur.strength = 0;
     game.roles_set = false;
     game.started = false;
-    game.p1_is_chaser ? game.p1_score++ : game.p2_score++
     game.p1_is_chaser = !game.p1_is_chaser;
-    if (!game.acending_timer) // need to be before the game.acending update
+    if (!game.acending_timer) { // need to be before the game.acending update
+        game.p1_is_chaser ? game.p1_score++ : game.p2_score++
         timer = 0;
+    } else {
+        timer++;
+    }
     game.acending_timer = !game.acending_timer;
-    game.game_state = 1;
+    game.game_over = false;
 }
 
 async function times_up()
@@ -551,12 +595,13 @@ async function times_up()
     zoomBlur.strength = 0;
     game.roles_set = false;
     game.started = false;
-    game.p1_is_chaser ? game.p2_score++ : game.p1_score++
     game.p1_is_chaser = !game.p1_is_chaser;
-    if (!game.acending_timer) // need to be before the game.acending_timer update
+    if (!game.acending_timer) { // need to be before the game.acending_timer update
+        game.p1_is_chaser ? game.p2_score++ : game.p1_score++
         timer = 0;
+    }
     game.acending_timer = !game.acending_timer;
-    game.game_state = 1;
+    game.game_over = false;
 }
 
 async function update_timer()
@@ -570,6 +615,9 @@ async function update_timer()
     game.lock_timer = false;
 }
 
+
+app.stage.addChild(waitingText);
+
 // app.ticker.speed = 1;
 // Listen for frame updates
 app.ticker.maxFPS = 60;
@@ -580,24 +628,40 @@ app.ticker.add(() => {
     // ------ Initialisation of the game if 2 players connected ------ //
     if (game.block_input)
         Object.keys(kb).forEach(v => kb[v] = false)
-    if (!game.both_players_connected)
-        socket.emit('two_player_connected', (response) => {game.setValues(response)});
+    if (game.other_player_left)
+        window.location.reload();
+    socket.emit('two_player_connected', (response) => {game.setValues(response)});
     if (game.both_players_connected && !game.roles_set) {
         if (id[0] === "player:1") {
-            character.x = id[0] === game.chaser_is_player_one ? 79 : 1105;
-            character.y = id[0] === game.chaser_is_player_one ? 260 : 428;
-            character.activeAnim.scale.x = id[0] === game.chaser_is_player_one ? 3 : -3
-            roleStyle.fill = ['#ffffff', id[0] === game.chaser_is_player_one ? '#FF2700' : '#00D8FF'], // gradient
-            roleText.text = id[0] === game.chaser_is_player_one ? "Chaser" : "Chased";
+            character.x = p1ScoreText.x = game.p1_is_chaser ? 79 : 1105;
+            character.y = p1ScoreText.y = game.p1_is_chaser ? 260 : 428;
+            otherPlayer.x = game.p1_is_chaser ? 1105 : 79;
+            otherPlayer.y = game.p1_is_chaser ? 428 : 260;
+            p1ScoreText.y -= 100;
+            p2ScoreText.x = otherPlayer.x;
+            p2ScoreText.y = otherPlayer.y-100;
+            character.activeAnim.scale.x = game.p1_is_chaser ? 3 : -3
+            roleStyle.fill = ['#ffffff', game.p1_is_chaser ? '#FF2700' : '#00D8FF'], // gradient
+            roleText.text = game.p1_is_chaser ? "Chaser" : "Chased";
         }
         if (id[0] === "player:2") {
-            character.x = id[0] === game.chaser_is_player_one ? 1105 : 79;
-            character.y = id[0] === game.chaser_is_player_one ? 428 : 260;
-            character.activeAnim.scale.x = id[0] === game.chaser_is_player_one ? -3 : 3
-            roleStyle.fill = ['#ffffff', id[0] === game.chaser_is_player_one ? '#00D8FF' : '#FF2700'], // gradient
-            roleText.text = id[0] === game.chaser_is_player_one ? "Chased" : "Chaser";
+            character.x = p2ScoreText.x = game.p1_is_chaser ? 1105 : 79;
+            character.y = p2ScoreText.y = game.p1_is_chaser ? 428 : 260;
+            otherPlayer.x = game.p1_is_chaser ? 79 : 1105;
+            otherPlayer.y = game.p1_is_chaser ? 260 : 428;
+            p2ScoreText.y -= 100;
+            character.activeAnim.scale.x = game.p1_is_chaser ? -3 : 3
+            p1ScoreText.x = otherPlayer.x;
+            p1ScoreText.y = otherPlayer.y-100;
+            roleStyle.fill = ['#ffffff', game.p1_is_chaser ? '#00D8FF' : '#FF2700'], // gradient
+            roleText.text = game.p1_is_chaser ? "Chased" : "Chaser";
         }
+        p1ScoreText.text = `${game.p1_score}`;
+        p2ScoreText.text = `${game.p2_score}`;
+        app.stage.addChild(p1ScoreText);
+        app.stage.addChild(p2ScoreText);
         app.stage.addChild(roleText);
+        app.stage.removeChild(waitingText);
         start_round();
         game.roles_set = true;
     }
@@ -611,7 +675,7 @@ app.ticker.add(() => {
     }
 
     let oldTouchedGround = touchingGround;
-
+    console.log(game.game_over);
     touchingGround = testCollision(
         character.x + 2,
         character.y + 16 * SCALE * 2
@@ -630,7 +694,7 @@ app.ticker.add(() => {
         if (kb.ArrowLeft)
             character.vx = - (10 + character.vy);
     }
-    if (character.vy > 0) {
+    if (character.vy > 0 && !character.dashing) {
         for (let i = 0; i < character.vy; i++) {
             let testX1 = character.x + 2;
             let testX2 = character.x + 16 * SCALE * 1.5 - 3;
@@ -668,7 +732,7 @@ app.ticker.add(() => {
             character.x = character.x + 1;
         }
     }
-
+    console.log(character.x, character.y);
     if (character.vx < 0) {
         character.direction = 1;
         for (let i = character.vx; i < 0; i++) {
@@ -703,15 +767,20 @@ app.ticker.add(() => {
         jumping.play();
         character.jumped = true;
     }
+    if (kb.Akey) {
+        character.vx = character.direction == 0 ? 15 : -15;
+        dash();
+    }
     if (kb.ArrowDown) {
         character.vx = character.vy;
         initSlide.play();
         if (character.activeAnim != initSlide && character.activeAnim != sliding)
-            character.activeAnim = initSlide;
+        character.activeAnim = initSlide;
     }
     if ((character.activeAnim == standing || character.activeAnim == running) && character.vy > 10)
         character.activeAnim = falling;
     if (justTouchedGround) {
+        character.dashed = false;
         if (kb.ArrowLeft || kb.ArrowRight)
             character.activeAnim = running;
         else character.activeAnim = standing;
@@ -742,7 +811,7 @@ app.ticker.add(() => {
     // && game.both_players_connected) || game.game_state == 2) {
         //     end_round();
     // }
-    if (game.both_players_connected && game.game_state == 2) {
+    if (game.both_players_connected && game.game_over == true && game.started) {
         end_round();
     }
 });

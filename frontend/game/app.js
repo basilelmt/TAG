@@ -7,6 +7,7 @@ const id = []
 const SCALE = 1.5
 var time = Date.now();
 var timer = 0;
+var end_the_round = false;
 var bumpCounter = 0; // to control annnoying bug
 var game = {
     block_input: false,
@@ -14,6 +15,7 @@ var game = {
     both_players_connected: false,
     other_player_left: false,
     game_over: false,
+    round_is_over: false,
     acending_timer: true,
     p1_is_chaser: true,
     p1_score: 0,
@@ -327,8 +329,6 @@ function clone_animations(animations) {
 }
 
 
-// ------------- Faire slide après une chute + anim chute
-
 const skins = [
     [[0, 0, 0], [0, 0, 0], 0],
     [[0, 0, 1], [0, 1, 0], 1],
@@ -345,8 +345,8 @@ var changeColor = new PIXI.filters.ColorReplaceFilter();
 var otherChangeColor = new PIXI.filters.ColorReplaceFilter();
 animations.forEach(x => x.filters = [changeColor, blur, trail]); // glow
 other_player_animations.forEach(x => x.filters = [otherChangeColor]); //blur
-// animations.forEach(x => x.scale.set(SCALE, SCALE));
 
+// Info of the other player, for an accurate display.
 var otherPlayer = {
     x: 0,
     y: 0,
@@ -364,6 +364,7 @@ var otherPlayer = {
     }
 }
 
+// Info of the playing character.
 let character = {
     x: app.screen.width/3, y: app.screen.height/3,//app.screen.height/1.26,
     vx: 10, vy: 0,
@@ -375,6 +376,7 @@ let character = {
     dashed: false
 };
 
+// For easier input management
 let kb = {
     ArrowRight: false,
     ArrowLeft: false,
@@ -383,7 +385,7 @@ let kb = {
     Akey: false
 }
 
-
+// Communicaiton with server to get info of the other player.
 function send_data() {
     let data = {
         id: id[0],
@@ -395,12 +397,14 @@ function send_data() {
         game_over: game.game_over
     }
     socket.emit('trade_player_pos', data, (response) => {
-        if (game.started)
-            game.game_over = response.game_over;
         otherPlayer.setValues(response.player_info);
+        if (response.game_over) {
+            end_the_round = true;
+        }
     });
 }
 
+// Colisions of the map + with other player
 const coliding = coord => map[coord[1]][coord[0]] == 0;
 
 function testCollision(worldX, worldY, canStep=false) {
@@ -432,6 +436,7 @@ function testCollision(worldX, worldY, canStep=false) {
     return false;
 }
 
+// Anim management
 jumping.onLoop = function () {
     jumping.stop();
     character.activeAnim = rolling;
@@ -442,6 +447,7 @@ initSlide.onLoop = function () {
     character.activeAnim = sliding;
 }
 
+// On keypress
 document.addEventListener('keydown', function(e) {
     if (e.key === "ArrowRight") {
         kb.ArrowRight = true;
@@ -480,6 +486,7 @@ document.addEventListener('keydown', function(e) {
         window.location.reload();
 });
 
+// On keyup
 document.addEventListener('keyup', function(e) {
     if (e.key === "ArrowRight" && kb.ArrowRight) {
         kb.ArrowRight = false;
@@ -546,8 +553,11 @@ async function start_round()
 
 async function end_round()
 {
+    console.log("end round");
     zoomBlur.strength = 0.3;
+    console.log(zoomBlur.strength);
     zoomBlur.center = [character.x, character.y];
+    app.ticker.start();
     blur.velocity = [0, 0];
     const endText = new PIXI.Text("TAG!", endStyle);
     endText.anchor.set(0.5);
@@ -572,6 +582,7 @@ async function end_round()
     }
     game.acending_timer = !game.acending_timer;
     game.game_over = false;
+    end_the_round = false;
 }
 
 async function times_up()
@@ -615,14 +626,39 @@ async function update_timer()
     game.lock_timer = false;
 }
 
+// Controler management. Need to be in game loop
+function handle_gamepad()
+{
+    const gamepad = navigator.getGamepads()[0];
+    if (gamepad.buttons[0].pressed) {
+        document.dispatchEvent(new KeyboardEvent('keydown', {'key': ' '}));
+    } else {
+        document.dispatchEvent(new KeyboardEvent('keyup', {'key': ' '}));
+    }
+    if (gamepad.axes[0] < 0) {
+        document.dispatchEvent(new KeyboardEvent('keydown', {'key': 'ArrowLeft'}));
+    } else {
+        document.dispatchEvent(new KeyboardEvent('keyup', {'key': 'ArrowLeft'}));
+    }
+    if (gamepad.axes[0] > 0) {
+        document.dispatchEvent(new KeyboardEvent('keydown', {'key': 'ArrowRight'}));
+    } else {
+        document.dispatchEvent(new KeyboardEvent('keyup', {'key': 'ArrowRight'}));
+    }
+    if (gamepad.buttons[7].pressed && !character.dashed) {
+        kb.Akey = true;
+    }
+}
 
+// When player is alone.
 app.stage.addChild(waitingText);
 
-// app.ticker.speed = 1;
-// Listen for frame updates
 app.ticker.maxFPS = 60;
+// Listen for frame updates
 app.ticker.add(() => {
-    // console.log(app.ticker.FPS);
+    // if contoler connected
+    if (navigator.getGamepads()[0])
+        handle_gamepad();
     if (game.started === true && !game.lock_timer)
         update_timer();
     // ------ Initialisation of the game if 2 players connected ------ //
@@ -675,7 +711,7 @@ app.ticker.add(() => {
     }
 
     let oldTouchedGround = touchingGround;
-    console.log(game.game_over);
+    // console.log(game.game_over);
     touchingGround = testCollision(
         character.x + 2,
         character.y + 16 * SCALE * 2
@@ -732,7 +768,7 @@ app.ticker.add(() => {
             character.x = character.x + 1;
         }
     }
-    console.log(character.x, character.y);
+    // console.log(character.x, character.y);
     if (character.vx < 0) {
         character.direction = 1;
         for (let i = character.vx; i < 0; i++) {
@@ -786,8 +822,6 @@ app.ticker.add(() => {
         else character.activeAnim = standing;
     }
 
-    // ------ Communication with server ----- //
-    send_data();
 
     // ------ Player Drawing ------ //
     blur.velocity = [character.vx, character.vy];
@@ -806,14 +840,10 @@ app.ticker.add(() => {
         app.stage.addChild(otherPlayer.activeAnim);
     app.stage.addChild(character.activeAnim);
 
-    // if ((character.x >= otherPlayer.x && character.x <= otherPlayer.x + 16*SCALE
-    // && character.y >= otherPlayer.y && character.y <= otherPlayer.y + 3*16*SCALE
-    // && game.both_players_connected) || game.game_state == 2) {
-        //     end_round();
-    // }
-    if (game.both_players_connected && game.game_over == true && game.started) {
+    // ------ Communication with server ----- //
+    send_data();
+    if (end_the_round)
         end_round();
-    }
 });
 
 app.loader.onError.add((error) => console.error(error));

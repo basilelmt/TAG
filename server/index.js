@@ -16,6 +16,7 @@ var game_data = {
         activeAnim: "standing",
         direction: "right",
         game_over: false,
+        ready: false,
         skinIndex: 0
     },
     'player2': {
@@ -25,6 +26,7 @@ var game_data = {
         activeAnim: "standing",
         direction: "right",
         game_over: false,
+        ready: false,
         skinIndex: 0
     },
     setValues(data) {
@@ -36,6 +38,7 @@ var game_data = {
         player.direction = data.direction;
         player.skinIndex = data.skinIndex;
         player.game_over = data.game_over;
+        player.ready = data.ready;
     }
 };
 
@@ -63,15 +66,24 @@ io.on('connection', (socket) => {
     console.log(`${socket.name} connected.`);
 
     socket.emit('playerInfo', {'players':players, 'name':socket.name});
-
+    if (game_data.player1.ready) {
+        socket.emit('game_over');
+        console.log("sent game over");
+        game_data.player1.game_over = false;
+        game_data.player1.game_over = false;
+    }
     socket.on('trade_player_pos', (data, callback) => {
         game_data.setValues(data);
         callback({
                 'player_info': data.id === "player:1" ? game_data.player2 : game_data.player1,
                 'game_over': game_data.player1.game_over || game_data.player2.game_over
         });
-        game_data.player1.game_over = false;
-        game_data.player2.game_over = false;
+        // if (game_data.player1.game_over || game_data.player2.game_over)
+        //     console.log("sent info i swear");
+        // if (data.id == "player:1" && game_data.player1.game_over == true)
+        //     game_data.player2.game_over = false;
+        // if (data.id == "player:2" && game_data.player2.game_over == true)
+        //     game_data.player1.game_over = false;
     });
 
     socket.on('two_player_connected', (callback) => callback(players.length == 2));

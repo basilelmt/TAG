@@ -398,7 +398,7 @@ function send_data() {
     }
     socket.emit('trade_player_pos', data, (response) => {
         otherPlayer.setValues(response.player_info);
-        if (response.game_over) {
+        if (response.game_over && game.started) {
             end_the_round = true;
         }
     });
@@ -420,8 +420,9 @@ function testCollision(worldX, worldY, canStep=false) {
     ];
     hitbox.forEach(function(x){
         otherHitbox.forEach(function(y){
-            if (x[0] == y[0] && x[1] == y[1] && !game.block_input && game.started) {
+            if (x[0] == y[0] && x[1] == y[1] && !game.block_input && game.roles_set) {
                 console.log("Colision with other player");
+                console.log(game);
                 game.game_over = true;
             }
         })
@@ -553,6 +554,8 @@ async function start_round()
 
 async function end_round()
 {
+    game.started = false;
+    end_the_round = false;
     console.log("end round");
     zoomBlur.strength = 0.3;
     console.log(zoomBlur.strength);
@@ -572,7 +575,6 @@ async function end_round()
     app.stage.removeChild(endText);
     zoomBlur.strength = 0;
     game.roles_set = false;
-    game.started = false;
     game.p1_is_chaser = !game.p1_is_chaser;
     if (!game.acending_timer) { // need to be before the game.acending update
         game.p1_is_chaser ? game.p1_score++ : game.p2_score++
@@ -582,11 +584,12 @@ async function end_round()
     }
     game.acending_timer = !game.acending_timer;
     game.game_over = false;
-    end_the_round = false;
 }
 
 async function times_up()
 {
+    game.started = false;
+    end_the_round = false;
     console.log("Chased wins !");
     // game.game_state = 2;
     zoomBlur.strength = 0.3;
@@ -605,7 +608,6 @@ async function times_up()
     app.stage.removeChild(endText);
     zoomBlur.strength = 0;
     game.roles_set = false;
-    game.started = false;
     game.p1_is_chaser = !game.p1_is_chaser;
     if (!game.acending_timer) { // need to be before the game.acending_timer update
         game.p1_is_chaser ? game.p2_score++ : game.p1_score++
@@ -692,8 +694,8 @@ app.ticker.add(() => {
             roleStyle.fill = ['#ffffff', game.p1_is_chaser ? '#00D8FF' : '#FF2700'], // gradient
             roleText.text = game.p1_is_chaser ? "Chased" : "Chaser";
         }
-        p1ScoreText.text = `${game.p1_score}`;
-        p2ScoreText.text = `${game.p2_score}`;
+        p1ScoreText.text = `${game.p2_score}`;
+        p2ScoreText.text = `${game.p1_score}`;
         app.stage.addChild(p1ScoreText);
         app.stage.addChild(p2ScoreText);
         app.stage.addChild(roleText);

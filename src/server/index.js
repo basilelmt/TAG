@@ -42,19 +42,19 @@ var game_data = {
     }
 };
 
-app.use("/frontend", express.static('./frontend/'));
+app.use("/src", express.static('./src/'));
 app.use("/node_modules", express.static('./node_modules/'));
 app.use("/ressources", express.static('./ressources/'));
 
 app.get('/', (req, res) => {
-    res.sendFile(path.resolve('frontend/menu/index.html'));
+    res.sendFile(path.resolve('src/menu/index.html'));
 });
 
 app.get('/game', (req, res) => {
     if (players.length == 2)
         res.send('<h1>Sorry, lobby is full...</h1>');
     else
-        res.sendFile(path.resolve('index.html'));
+        res.sendFile(path.resolve('src/game/index.html'));
 });
 
 io.on('connection', (socket) => {
@@ -62,13 +62,14 @@ io.on('connection', (socket) => {
         socket.name = 'player:1';
     else
         socket.name = players[0] === 'player:1' ? 'player:2' : 'player:1';
+
     players.push(`player:${players.length+1}`);
     console.log(`${socket.name} connected.`);
 
     socket.emit('playerInfo', {'players':players, 'name':socket.name});
+
     if (game_data.player1.ready) {
         socket.emit('game_over');
-        console.log("sent game over");
         game_data.player1.game_over = false;
         game_data.player1.game_over = false;
     }
@@ -78,14 +79,7 @@ io.on('connection', (socket) => {
                 'player_info': data.id === "player:1" ? game_data.player2 : game_data.player1,
                 'game_over': game_data.player1.game_over || game_data.player2.game_over
         });
-        // if (game_data.player1.game_over || game_data.player2.game_over)
-        //     console.log("sent info i swear");
-        // if (data.id == "player:1" && game_data.player1.game_over == true)
-        //     game_data.player2.game_over = false;
-        // if (data.id == "player:2" && game_data.player2.game_over == true)
-        //     game_data.player1.game_over = false;
     });
-
     socket.on('two_player_connected', (callback) => callback(players.length == 2));
     socket.on('disconnect', () => {
         console.log(`${players[players.indexOf(socket.name)]} as disconnected.`);

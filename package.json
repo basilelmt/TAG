@@ -1,0 +1,27 @@
+{
+  "name": "tag",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/server/index.js",
+  "dependencies": {
+    "express" : "4.18.1",
+    "socket.io": "4.5.1",
+    "pixi.js": "6.3.2",
+    "@pixi/graphics": "6.3.2",
+    "pixi-filters": "4.1.6"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/server/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Basile-LAMOTTE/TAG.git"
+  },
+  "author": "Basile Lamotte",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Basile-LAMOTTE/TAG/issues"
+  },
+  "homepage": "https://github.com/Basile-LAMOTTE/TAG#readme"
+}

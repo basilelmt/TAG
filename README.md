@@ -8,7 +8,7 @@
 
 ### Installation
 
-Grab a copie of this project using using your favorite way.
+Grab a copie of this project using your favorite way.
 
 ### Build
 

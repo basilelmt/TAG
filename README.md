@@ -1,7 +1,5 @@
 <p align="center"><img src="https://i.postimg.cc/4yfZMC6J/TAG-3.png" alt="TAG"></p>
 
-TAG is a multipayer game made in javascript.
-
 ## Getting started
 
 ### Prerequisites

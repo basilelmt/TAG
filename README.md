@@ -45,3 +45,5 @@ Give your friends your local ipv4 so they can join you.
 
 #### Thanks for reading and have fun !
 If you have any question/issue feel free to send me an email: basile.lamotte@gmail.com
+
+![Alt Text](http://ForTheBadge.com/images/badges/built-with-love.svg)

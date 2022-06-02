@@ -12,9 +12,9 @@ Grab a copie of this project using using your favorite way.
 
 ### Build
 
-At the root of the project, run `npm install` to install all dependances, then `npm start`.
+At the root of the project, run `npm install` to install all dependances, then `npm start`.  
 This prompt should appear:
-> Server up!
+> Server up!  
 > -> http://localhost:3000
 
 You can now connect to it using your favorite browser !
@@ -26,8 +26,8 @@ You can now connect to it using your favorite browser !
 * If you are `chased`, you need to avoid the other player as long as possible.
 > After each round the roles are inverted, the one who spent the less time getting the other player win a point.
 
-### Controles
-You can play it with your keyboard or a controller.
+### Controls
+You can play with your keyboard or a controller.
 
 #### Keyboard
 * Move around with arrows `←` `→`.
